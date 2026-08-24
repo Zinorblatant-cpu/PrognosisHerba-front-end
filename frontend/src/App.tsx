@@ -5,6 +5,7 @@ import { Home } from "./pages/Home";
 import { PrevisoesIA } from "./pages/PrevisoesIA";
 import { Otimizacao } from "./pages/Otimizacao";
 import { Cronograma } from "./pages/Cronograma";
+import { Monitoramento } from "./pages/Monitoramento";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
             <Route path="/previsoes" element={<PrevisoesIA />} />
             <Route path="/otimizacao" element={<Otimizacao />} />
             <Route path="/cronograma" element={<Cronograma />} />
+            <Route path="/monitoramento" element={<Monitoramento />} />
           </Routes>
         </AppShell>
       </BrowserRouter>

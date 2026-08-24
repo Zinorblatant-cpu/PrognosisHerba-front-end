@@ -6,7 +6,7 @@ import type { AlocacaoPublicada } from "../lib/types";
 
 const DADOS: AlocacaoPublicada = {
   publicadoEm: "2026-08-24T00:00:00Z",
-  mesReferencia: { ano: 2026, mes: 9 },
+  periodo: { inicio: "2026-09-14", fim: "2026-09-15" },
   alocacoes: [
     {
       equipeId: "equipe_1",

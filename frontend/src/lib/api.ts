@@ -1,4 +1,5 @@
 import type {
+  AlocacaoPublicada,
   GerarAlocacaoDePrevisoesRequest,
   GerarAlocacaoDePrevisoesResponse,
   PrevisaoRegiao,
@@ -60,6 +61,16 @@ export async function publicarAlocacao(payload: PublicarAlocacaoRequest): Promis
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+/** null quando ainda não há nenhuma alocação publicada pela Otimização. */
+export async function getAlocacaoAtual(): Promise<AlocacaoPublicada | null> {
+  try {
+    return await request<AlocacaoPublicada>("/alocacao/atual");
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
 }
 
 export { ApiError };

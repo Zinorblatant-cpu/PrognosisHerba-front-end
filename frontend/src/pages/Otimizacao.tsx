@@ -14,9 +14,6 @@ export function Otimizacao() {
 
   const [quantidadeEquipes, setQuantidadeEquipes] = useState(4);
   const [capacidadeDiaria, setCapacidadeDiaria] = useState(3);
-  const [usarMesAutomatico, setUsarMesAutomatico] = useState(true);
-  const [ano, setAno] = useState(2026);
-  const [mes, setMes] = useState(9);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [publicadoParaPodadores, setPublicadoParaPodadores] = useState(false);
@@ -26,17 +23,12 @@ export function Otimizacao() {
     setErro(null);
     setPublicadoParaPodadores(false);
     try {
-      const resposta = await gerarAlocacaoDePrevisoes({
-        quantidadeEquipes,
-        capacidadeDiaria,
-        ano: usarMesAutomatico ? undefined : ano,
-        mes: usarMesAutomatico ? undefined : mes,
-      });
+      const resposta = await gerarAlocacaoDePrevisoes({ quantidadeEquipes, capacidadeDiaria });
       setResultado(resposta);
 
       try {
         await publicarAlocacao({
-          mesReferencia: resposta.mesReferencia,
+          periodo: resposta.periodo,
           alocacoes: resposta.alocacoes,
           naoAlocados: resposta.naoAlocados,
         });
@@ -56,7 +48,7 @@ export function Otimizacao() {
     <div>
       <PageHeader
         title="Otimização"
-        subtitle="Gera a alocação ótima de equipes de poda a partir das previsões da IA (modelo horoprognosis / PuLP)"
+        subtitle="Gera o cronograma completo de poda a partir das previsões da IA, cobrindo todo o horizonte de 12 semanas (modelo horoprognosis / PuLP)"
       />
 
       <div className="grid grid-cols-3 gap-4">
@@ -93,50 +85,9 @@ export function Otimizacao() {
               />
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-fg">
-              <input
-                type="checkbox"
-                checked={usarMesAutomatico}
-                onChange={(e) => setUsarMesAutomatico(e.target.checked)}
-                className="accent-primary"
-              />
-              Detectar mês automaticamente (mais urgente)
-            </label>
-
-            {!usarMesAutomatico && (
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label htmlFor="ano" className="mb-1 block text-xs text-fg-muted">
-                    Ano
-                  </label>
-                  <input
-                    id="ano"
-                    type="number"
-                    value={ano}
-                    onChange={(e) => setAno(Number(e.target.value))}
-                    className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-fg focus:border-primary focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="mes" className="mb-1 block text-xs text-fg-muted">
-                    Mês
-                  </label>
-                  <input
-                    id="mes"
-                    type="number"
-                    min={1}
-                    max={12}
-                    value={mes}
-                    onChange={(e) => setMes(Number(e.target.value))}
-                    className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-fg focus:border-primary focus:outline-none"
-                  />
-                </div>
-              </div>
-            )}
-
             <Button onClick={gerar} disabled={carregando} className="w-full">
               {carregando && <Loader2 size={16} className="animate-spin" />}
-              Gerar alocação
+              Gerar cronograma completo
             </Button>
 
             {erro && <p className="text-sm text-danger">{erro}</p>}
@@ -151,7 +102,7 @@ export function Otimizacao() {
             title="Locais derivados da previsão"
             subtitle={
               resultado
-                ? `Mês de referência: ${String(resultado.mesReferencia.mes).padStart(2, "0")}/${resultado.mesReferencia.ano}`
+                ? `Período: ${resultado.periodo.inicio} a ${resultado.periodo.fim}`
                 : "Rode o solver para ver os locais que precisam de poda"
             }
           />
@@ -192,21 +143,10 @@ export function Otimizacao() {
                 </tbody>
               </table>
 
-              {(resultado.foraDoMes.length > 0 || resultado.semAlertaNoHorizonte.length > 0) && (
-                <div className="mt-4 space-y-1 text-xs text-fg-muted">
-                  {resultado.foraDoMes.length > 0 && (
-                    <p>
-                      Fora do mês selecionado: {resultado.foraDoMes.map((l) => l.id).join(", ")} (precisarão de poda
-                      em outro mês).
-                    </p>
-                  )}
-                  {resultado.semAlertaNoHorizonte.length > 0 && (
-                    <p>
-                      Sem necessidade de poda nas próximas 12 semanas:{" "}
-                      {resultado.semAlertaNoHorizonte.join(", ")}.
-                    </p>
-                  )}
-                </div>
+              {resultado.semAlertaNoHorizonte.length > 0 && (
+                <p className="mt-4 text-xs text-fg-muted">
+                  Sem necessidade de poda nas próximas 12 semanas: {resultado.semAlertaNoHorizonte.join(", ")}.
+                </p>
               )}
 
               <Button variant="secondary" className="mt-4" onClick={() => navigate("/cronograma")}>

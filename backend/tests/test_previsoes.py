@@ -97,32 +97,28 @@ def _previsoes_fake():
 
 class TestDerivarLocaisDePoda:
     def test_acha_primeira_semana_que_cruza_limiar(self):
-        resultado = derivar_locais_de_poda(_previsoes_fake(), ano=2026, mes=9)
+        resultado = derivar_locais_de_poda(_previsoes_fake())
         ra01 = next(loc for loc in resultado["locais"] if loc["id"] == "RA-01")
         assert ra01["dataAlvo"] == "2026-09-14"
         assert ra01["alturaPrevistaCm"] == 10.5
 
     def test_mapeia_nivel_alerta_para_prioridade(self):
-        resultado = derivar_locais_de_poda(_previsoes_fake(), ano=2026, mes=9)
+        resultado = derivar_locais_de_poda(_previsoes_fake())
         ra01 = next(loc for loc in resultado["locais"] if loc["id"] == "RA-01")
         assert ra01["prioridade"] == "media"
 
     def test_regiao_sem_semana_no_limiar_fica_sem_alerta_no_horizonte(self):
-        resultado = derivar_locais_de_poda(_previsoes_fake(), ano=2026, mes=9)
+        resultado = derivar_locais_de_poda(_previsoes_fake())
         assert "RA-03" in resultado["semAlertaNoHorizonte"]
 
-    def test_regiao_fora_do_mes_pedido(self):
-        resultado = derivar_locais_de_poda(_previsoes_fake(), ano=2026, mes=9)
-        assert any(loc["id"] == "RA-02" for loc in resultado["foraDoMes"])
-        assert not any(loc["id"] == "RA-02" for loc in resultado["locais"])
-
-    def test_sem_ano_mes_deduz_mes_mais_urgente(self):
+    def test_inclui_regioes_de_todos_os_meses_do_horizonte(self):
+        # RA-01 cruza o limiar em setembro, RA-02 em outubro — ambas devem
+        # aparecer no mesmo lote (sem filtro de mês).
         resultado = derivar_locais_de_poda(_previsoes_fake())
-        assert (resultado["anoUsado"], resultado["mesUsado"]) == (2026, 9)
-        assert {loc["id"] for loc in resultado["locais"]} == {"RA-01"}
+        assert {loc["id"] for loc in resultado["locais"]} == {"RA-01", "RA-02"}
 
     def test_limiar_customizado(self):
-        resultado = derivar_locais_de_poda(_previsoes_fake(), ano=2026, mes=9, limiar=11.0)
+        resultado = derivar_locais_de_poda(_previsoes_fake(), limiar=11.0)
         ra01 = next(loc for loc in resultado["locais"] if loc["id"] == "RA-01")
         assert ra01["dataAlvo"] == "2026-09-21"
 
@@ -162,7 +158,8 @@ class TestGerarAlocacaoDePrevisoesEndpoint:
         assert res.status_code == 200
         data = res.json()
         assert data["locaisDerivados"]
-        assert "mesReferencia" in data
+        assert "periodo" in data
+        assert data["periodo"]["inicio"] <= data["periodo"]["fim"]
 
     def test_locais_derivados_aparecem_na_alocacao_ou_nao_alocados(self):
         res = client.post("/previsoes/gerar-alocacao", json={"quantidadeEquipes": 4})
@@ -172,12 +169,22 @@ class TestGerarAlocacaoDePrevisoesEndpoint:
         nao_alocados = {loc["localId"] for loc in data["naoAlocados"]}
         assert ids_derivados == alocados | nao_alocados
 
-    def test_ano_mes_explicitos_sem_regiao_no_mes_retorna_422(self):
-        res = client.post(
-            "/previsoes/gerar-alocacao",
-            json={"quantidadeEquipes": 1, "ano": 2020, "mes": 1},
-        )
-        assert res.status_code == 422
+    def test_periodo_cobre_todo_o_horizonte_das_previsoes(self):
+        # As 4 regiões do CSV cruzam o limiar em meses diferentes — o
+        # período devolvido precisa cobrir todas, não só um mês.
+        res = client.post("/previsoes/gerar-alocacao", json={"quantidadeEquipes": 4})
+        data = res.json()
+        datas_alvo = [loc["dataAlvo"] for loc in data["locaisDerivados"]]
+        assert data["periodo"]["inicio"] <= min(datas_alvo)
+        assert data["periodo"]["fim"] == max(datas_alvo)
+
+    def test_cada_local_alocado_ate_o_proprio_prazo(self):
+        res = client.post("/previsoes/gerar-alocacao", json={"quantidadeEquipes": 4})
+        data = res.json()
+        prazo_por_id = {loc["id"]: loc["dataAlvo"] for loc in data["locaisDerivados"]}
+        for aloc in data["alocacoes"]:
+            for local in aloc["locais"]:
+                assert aloc["dia"] <= prazo_por_id[local["localId"]]
 
     def test_quantidade_equipes_zero_retorna_422(self):
         res = client.post("/previsoes/gerar-alocacao", json={"quantidadeEquipes": 0})
@@ -185,3 +192,10 @@ class TestGerarAlocacaoDePrevisoesEndpoint:
 
     def test_limiar_padrao_e_dez_cm(self):
         assert LIMIAR_PODA_CM == 10.0
+
+    def test_limiar_tao_alto_que_nada_precisa_de_poda_retorna_422(self):
+        res = client.post(
+            "/previsoes/gerar-alocacao",
+            json={"quantidadeEquipes": 1, "limiarPodaCm": 999},
+        )
+        assert res.status_code == 422

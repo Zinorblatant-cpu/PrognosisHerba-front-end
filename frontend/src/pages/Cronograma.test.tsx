@@ -8,7 +8,7 @@ import { AlocacaoProvider, useAlocacao } from "../state/AlocacaoContext";
 import type { GerarAlocacaoDePrevisoesResponse } from "../lib/types";
 
 const RESULTADO: GerarAlocacaoDePrevisoesResponse = {
-  mesReferencia: { ano: 2026, mes: 9 },
+  periodo: { inicio: "2026-09-08", fim: "2026-09-20" },
   locaisDerivados: [
     { id: "A1", prioridade: "alta", dificuldade: "media", dataAlvo: "2026-09-10", alturaPrevistaCm: 11 },
     { id: "A2", prioridade: "media", dificuldade: "facil", dataAlvo: "2026-09-08", alturaPrevistaCm: 12 },
@@ -38,7 +38,6 @@ const RESULTADO: GerarAlocacaoDePrevisoesResponse = {
     { localId: "C2", prioridade: "baixa", dificuldade: "facil" },
   ],
   alerta: null,
-  foraDoMes: [],
   semAlertaNoHorizonte: [],
 };
 

@@ -7,7 +7,7 @@ import { AlocacaoProvider, useAlocacao } from "../state/AlocacaoContext";
 import type { GerarAlocacaoDePrevisoesResponse } from "../lib/types";
 
 const RESULTADO_FAKE = {
-  mesReferencia: { ano: 2026, mes: 9 },
+  periodo: { inicio: "2026-09-14", fim: "2026-09-15" },
   locaisDerivados: [],
   alocacoes: [
     { equipeId: "equipe_1", dia: "2026-09-14", locais: [{ localId: "A1", prioridade: "alta", dificuldade: "media" }] },
@@ -17,12 +17,11 @@ const RESULTADO_FAKE = {
   ],
   naoAlocados: [{ localId: "B1", prioridade: "baixa", dificuldade: "dificil" }],
   alerta: null,
-  foraDoMes: [],
   semAlertaNoHorizonte: [],
 } satisfies GerarAlocacaoDePrevisoesResponse;
 
 describe("Home", () => {
-  it("renderiza os três cards de navegação", () => {
+  it("renderiza os quatro cards de navegação", () => {
     render(
       <MemoryRouter>
         <AlocacaoProvider>
@@ -41,6 +40,10 @@ describe("Home", () => {
     expect(screen.getByRole("heading", { name: "Cronograma" }).closest("a")).toHaveAttribute(
       "href",
       "/cronograma",
+    );
+    expect(screen.getByRole("heading", { name: "Monitoramento" }).closest("a")).toHaveAttribute(
+      "href",
+      "/monitoramento",
     );
   });
 
@@ -75,7 +78,7 @@ describe("Home", () => {
 
     await user.click(screen.getByRole("button", { name: "gerar" }));
 
-    expect(screen.getByText("Mês de referência: 09/2026")).toBeInTheDocument();
+    expect(screen.getByText("Período: 2026-09-14 a 2026-09-15")).toBeInTheDocument();
     expect(screen.getByText("Locais alocados")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("Equipes em campo")).toBeInTheDocument();

@@ -25,11 +25,11 @@ export function Tag({ nivel, label }: { nivel: Nivel | string; label?: string })
   );
 }
 
-export function StatusTag({ status }: { status: "Programado" | "Pendente" }) {
+export function StatusTag({ status }: { status: "Programado" | "Pendente" | "Concluído" }) {
   const estilo =
-    status === "Programado"
-      ? "bg-success/10 text-success border-success/25"
-      : "bg-warning/10 text-warning border-warning/25";
+    status === "Pendente"
+      ? "bg-warning/10 text-warning border-warning/25"
+      : "bg-success/10 text-success border-success/25";
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${estilo}`}>
       <span className="h-1.5 w-1.5 rounded-full bg-current" />

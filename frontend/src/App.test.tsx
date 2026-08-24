@@ -1,17 +1,18 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import App from "./App";
-import { getPrevisoes } from "./lib/api";
+import { getAlocacaoAtual, getPrevisoes } from "./lib/api";
 
 vi.mock("./lib/api", async () => {
   const actual = await vi.importActual<typeof import("./lib/api")>("./lib/api");
-  return { ...actual, getPrevisoes: vi.fn() };
+  return { ...actual, getPrevisoes: vi.fn(), getAlocacaoAtual: vi.fn() };
 });
 
 describe("App", () => {
   beforeEach(() => {
     window.history.pushState({}, "", "/");
     vi.mocked(getPrevisoes).mockResolvedValue([]);
+    vi.mocked(getAlocacaoAtual).mockResolvedValue(null);
   });
 
   it("renderiza a Home na rota raiz", async () => {
@@ -35,5 +36,11 @@ describe("App", () => {
     window.history.pushState({}, "", "/cronograma");
     render(<App />);
     expect(screen.getByRole("heading", { name: "Cronograma" })).toBeInTheDocument();
+  });
+
+  it("renderiza a rota /monitoramento", async () => {
+    window.history.pushState({}, "", "/monitoramento");
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Monitoramento" })).toBeInTheDocument());
   });
 });

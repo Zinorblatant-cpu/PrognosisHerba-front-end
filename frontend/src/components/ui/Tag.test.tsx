@@ -40,4 +40,10 @@ describe("StatusTag", () => {
     const tag = screen.getByText("Pendente");
     expect(tag).toHaveClass("bg-warning/10");
   });
+
+  it("renderiza estilo de sucesso para Concluído", () => {
+    render(<StatusTag status="Concluído" />);
+    const tag = screen.getByText("Concluído");
+    expect(tag).toHaveClass("bg-success/10");
+  });
 });

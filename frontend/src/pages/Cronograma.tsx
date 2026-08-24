@@ -98,7 +98,7 @@ export function Cronograma() {
     <div>
       <PageHeader
         title="Cronograma"
-        subtitle={`Mês de referência: ${String(resultado.mesReferencia.mes).padStart(2, "0")}/${resultado.mesReferencia.ano}`}
+        subtitle={`Período: ${resultado.periodo.inicio} a ${resultado.periodo.fim}`}
       />
 
       <Card className="mb-4">
@@ -192,7 +192,7 @@ export function Cronograma() {
       <Card>
         <CardHeader
           title="Não alocados"
-          subtitle="Locais que ficaram de fora por falta de capacidade no mês"
+          subtitle="Locais que ficaram de fora por falta de capacidade no período"
         />
         {resultado.naoAlocados.length === 0 ? (
           <p className="text-sm text-fg-muted">Todos os locais derivados da previsão foram alocados.</p>

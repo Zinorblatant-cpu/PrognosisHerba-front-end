@@ -40,26 +40,45 @@ export interface LocalDerivado {
   alturaPrevistaCm: number;
 }
 
+export interface PeriodoReferencia {
+  inicio: string;
+  fim: string;
+}
+
 export interface GerarAlocacaoDePrevisoesRequest {
   quantidadeEquipes: number;
   capacidadeDiaria?: number;
-  ano?: number;
-  mes?: number;
   limiarPodaCm?: number;
 }
 
 export interface GerarAlocacaoDePrevisoesResponse {
-  mesReferencia: { ano: number; mes: number };
+  periodo: PeriodoReferencia;
   locaisDerivados: LocalDerivado[];
   alocacoes: AlocacaoDia[];
   naoAlocados: LocalAlocado[];
   alerta: AlertaCapacidade | null;
-  foraDoMes: LocalDerivado[];
   semAlertaNoHorizonte: string[];
 }
 
 export interface PublicarAlocacaoRequest {
-  mesReferencia: { ano: number; mes: number };
+  periodo: PeriodoReferencia;
   alocacoes: AlocacaoDia[];
+  naoAlocados: LocalAlocado[];
+}
+
+export interface LocalAlocadoComStatus extends LocalAlocado {
+  concluido: boolean;
+}
+
+export interface AlocacaoDiaComStatus {
+  equipeId: string;
+  dia: string;
+  locais: LocalAlocadoComStatus[];
+}
+
+export interface AlocacaoPublicada {
+  publicadoEm: string;
+  periodo: PeriodoReferencia;
+  alocacoes: AlocacaoDiaComStatus[];
   naoAlocados: LocalAlocado[];
 }

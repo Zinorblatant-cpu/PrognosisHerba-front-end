@@ -78,21 +78,20 @@ def _primeira_semana_no_limiar(semanas, limiar):
     return None
 
 
-def derivar_locais_de_poda(previsoes_por_regiao, ano=None, mes=None, limiar=LIMIAR_PODA_CM):
+def derivar_locais_de_poda(previsoes_por_regiao, limiar=LIMIAR_PODA_CM):
     """A partir das previsões de 12 semanas por região, deriva o lote de
-    `locais` (id/prioridade/dificuldade) que o solver de horoprognosis
-    espera, mais informação de transparência sobre o que ficou de fora.
+    `locais` (id/prioridade/dificuldade/dataAlvo) que
+    `rodar_modelo_horoprognosis_com_prazos` espera: TODAS as regiões que
+    cruzam `limiar` em algum momento do horizonte de 12 semanas — não só
+    as de um mês — cada uma com seu próprio prazo (`dataAlvo`, a primeira
+    semana em que a altura prevista atinge o limiar).
 
-    Para cada região, acha a primeira semana em que a altura prevista
-    atinge `limiar` (data-alvo de poda). Se `ano`/`mes` não forem
-    informados, usa o mês da data-alvo mais próxima entre as regiões (o
-    mês mais urgente do lote). Regiões cuja data-alvo cai fora do
-    ano/mês usado ficam em `fora_do_mes`; regiões que não cruzam o limiar
-    dentro do horizonte de 12 semanas ficam em `sem_alerta_no_horizonte`.
+    Regiões que não cruzam o limiar dentro do horizonte de 12 semanas
+    ficam em `sem_alerta_no_horizonte` (não têm o que podar ainda).
 
-    Retorna dict: {locais, foraDoMes, semAlertaNoHorizonte, anoUsado, mesUsado}.
+    Retorna dict: {locais, semAlertaNoHorizonte}.
     """
-    candidatos = []
+    locais = []
     sem_alerta_no_horizonte = []
 
     for regiao in previsoes_por_regiao:
@@ -100,7 +99,7 @@ def derivar_locais_de_poda(previsoes_por_regiao, ano=None, mes=None, limiar=LIMI
         if semana_alvo is None:
             sem_alerta_no_horizonte.append(regiao["idRegiao"])
             continue
-        candidatos.append({
+        locais.append({
             "id": regiao["idRegiao"],
             "prioridade": MAPA_PRIORIDADE[semana_alvo["nivelAlerta"]],
             "dificuldade": faixa_dificuldade(regiao["inclinacaoGraus"]),
@@ -108,31 +107,4 @@ def derivar_locais_de_poda(previsoes_por_regiao, ano=None, mes=None, limiar=LIMI
             "alturaPrevistaCm": semana_alvo["alturaPrevistaCm"],
         })
 
-    if ano is None or mes is None:
-        if not candidatos:
-            return {
-                "locais": [],
-                "foraDoMes": [],
-                "semAlertaNoHorizonte": sem_alerta_no_horizonte,
-                "anoUsado": ano,
-                "mesUsado": mes,
-            }
-        data_mais_proxima = min(c["dataAlvo"] for c in candidatos)
-        ano, mes = int(data_mais_proxima[:4]), int(data_mais_proxima[5:7])
-
-    locais = []
-    fora_do_mes = []
-    for candidato in candidatos:
-        ano_alvo, mes_alvo = int(candidato["dataAlvo"][:4]), int(candidato["dataAlvo"][5:7])
-        if (ano_alvo, mes_alvo) == (ano, mes):
-            locais.append(candidato)
-        else:
-            fora_do_mes.append(candidato)
-
-    return {
-        "locais": locais,
-        "foraDoMes": fora_do_mes,
-        "semAlertaNoHorizonte": sem_alerta_no_horizonte,
-        "anoUsado": ano,
-        "mesUsado": mes,
-    }
+    return {"locais": locais, "semAlertaNoHorizonte": sem_alerta_no_horizonte}

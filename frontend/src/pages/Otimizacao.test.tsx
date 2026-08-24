@@ -13,7 +13,7 @@ vi.mock("../lib/api", async () => {
 });
 
 const RESULTADO: GerarAlocacaoDePrevisoesResponse = {
-  mesReferencia: { ano: 2026, mes: 9 },
+  periodo: { inicio: "2026-09-14", fim: "2026-11-02" },
   locaisDerivados: [
     { id: "A1", prioridade: "alta", dificuldade: "media", dataAlvo: "2026-09-14", alturaPrevistaCm: 11 },
   ],
@@ -25,9 +25,8 @@ const RESULTADO: GerarAlocacaoDePrevisoesResponse = {
     deficit: 2,
     equipesDiaAdicionais: 1,
     equipesExtrasSugeridas: 1,
-    mensagem: "Capacidade insuficiente para o mês.",
+    mensagem: "Capacidade insuficiente para o período.",
   },
-  foraDoMes: [{ id: "B1", prioridade: "media", dificuldade: "facil", dataAlvo: "2026-10-01", alturaPrevistaCm: 9 }],
   semAlertaNoHorizonte: ["Sul"],
 };
 
@@ -71,48 +70,22 @@ describe("Otimizacao", () => {
     expect(capacidade).toHaveValue(2);
   });
 
-  it("revela campos de ano/mês ao desmarcar detecção automática", async () => {
-    const user = userEvent.setup();
-    renderOtimizacao();
-
-    expect(screen.queryByLabelText("Ano")).not.toBeInTheDocument();
-
-    await user.click(screen.getByLabelText(/Detectar mês automaticamente/));
-
-    const ano = screen.getByLabelText("Ano") as HTMLInputElement;
-    const mes = screen.getByLabelText("Mês") as HTMLInputElement;
-    expect(ano).toBeInTheDocument();
-
-    await user.clear(ano);
-    await user.type(ano, "2027");
-    await user.clear(mes);
-    await user.type(mes, "3");
-
-    expect(ano).toHaveValue(2027);
-    expect(mes).toHaveValue(3);
-  });
-
-  it("gera alocação com sucesso e mostra tabela, alerta e seções extras", async () => {
+  it("gera o cronograma completo com sucesso e mostra tabela, alerta e locais sem alerta", async () => {
     vi.mocked(gerarAlocacaoDePrevisoes).mockResolvedValue(RESULTADO);
     const user = userEvent.setup();
     renderOtimizacao();
 
-    await user.click(screen.getByRole("button", { name: /Gerar alocação/ }));
+    await user.click(screen.getByRole("button", { name: /Gerar cronograma completo/ }));
 
     await waitFor(() => expect(screen.getByText("A1")).toBeInTheDocument());
-    expect(screen.getByText("Capacidade insuficiente para o mês.")).toBeInTheDocument();
-    expect(screen.getByText(/Fora do mês selecionado/)).toBeInTheDocument();
+    expect(screen.getByText("Capacidade insuficiente para o período.")).toBeInTheDocument();
     expect(screen.getByText(/Sem necessidade de poda nas próximas 12 semanas/)).toBeInTheDocument();
-    expect(gerarAlocacaoDePrevisoes).toHaveBeenCalledWith({
-      quantidadeEquipes: 4,
-      capacidadeDiaria: 3,
-      ano: undefined,
-      mes: undefined,
-    });
+    expect(screen.getByText("Período: 2026-09-14 a 2026-11-02")).toBeInTheDocument();
+    expect(gerarAlocacaoDePrevisoes).toHaveBeenCalledWith({ quantidadeEquipes: 4, capacidadeDiaria: 3 });
 
     await waitFor(() =>
       expect(publicarAlocacao).toHaveBeenCalledWith({
-        mesReferencia: RESULTADO.mesReferencia,
+        periodo: RESULTADO.periodo,
         alocacoes: RESULTADO.alocacoes,
         naoAlocados: RESULTADO.naoAlocados,
       }),
@@ -126,61 +99,20 @@ describe("Otimizacao", () => {
     const user = userEvent.setup();
     renderOtimizacao();
 
-    await user.click(screen.getByRole("button", { name: /Gerar alocação/ }));
+    await user.click(screen.getByRole("button", { name: /Gerar cronograma completo/ }));
 
     await waitFor(() => expect(screen.getByText("A1")).toBeInTheDocument());
     expect(screen.queryByText(/Publicado para o site dos podadores/)).not.toBeInTheDocument();
   });
 
-  it("envia ano/mês quando detecção automática está desligada", async () => {
-    vi.mocked(gerarAlocacaoDePrevisoes).mockResolvedValue(RESULTADO);
-    const user = userEvent.setup();
-    renderOtimizacao();
-
-    await user.click(screen.getByLabelText(/Detectar mês automaticamente/));
-    await user.click(screen.getByRole("button", { name: /Gerar alocação/ }));
-
-    await waitFor(() =>
-      expect(gerarAlocacaoDePrevisoes).toHaveBeenCalledWith({
-        quantidadeEquipes: 4,
-        capacidadeDiaria: 3,
-        ano: 2026,
-        mes: 9,
-      }),
-    );
-  });
-
-  it("mostra só a seção 'fora do mês' quando não há regiões sem alerta no horizonte", async () => {
+  it("não mostra a seção de locais sem alerta quando não há nenhum", async () => {
     vi.mocked(gerarAlocacaoDePrevisoes).mockResolvedValue({ ...RESULTADO, semAlertaNoHorizonte: [] });
     const user = userEvent.setup();
     renderOtimizacao();
 
-    await user.click(screen.getByRole("button", { name: /Gerar alocação/ }));
-
-    await waitFor(() => expect(screen.getByText(/Fora do mês selecionado/)).toBeInTheDocument());
-    expect(screen.queryByText(/Sem necessidade de poda/)).not.toBeInTheDocument();
-  });
-
-  it("mostra só a seção 'sem alerta' quando não há locais fora do mês", async () => {
-    vi.mocked(gerarAlocacaoDePrevisoes).mockResolvedValue({ ...RESULTADO, foraDoMes: [] });
-    const user = userEvent.setup();
-    renderOtimizacao();
-
-    await user.click(screen.getByRole("button", { name: /Gerar alocação/ }));
-
-    await waitFor(() => expect(screen.getByText(/Sem necessidade de poda/)).toBeInTheDocument());
-    expect(screen.queryByText(/Fora do mês selecionado/)).not.toBeInTheDocument();
-  });
-
-  it("não mostra seções extras quando não há locais fora do mês nem regiões sem alerta", async () => {
-    vi.mocked(gerarAlocacaoDePrevisoes).mockResolvedValue({ ...RESULTADO, foraDoMes: [], semAlertaNoHorizonte: [] });
-    const user = userEvent.setup();
-    renderOtimizacao();
-
-    await user.click(screen.getByRole("button", { name: /Gerar alocação/ }));
+    await user.click(screen.getByRole("button", { name: /Gerar cronograma completo/ }));
 
     await waitFor(() => expect(screen.getByText("A1")).toBeInTheDocument());
-    expect(screen.queryByText(/Fora do mês selecionado/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Sem necessidade de poda/)).not.toBeInTheDocument();
   });
 
@@ -189,7 +121,7 @@ describe("Otimizacao", () => {
     const user = userEvent.setup();
     renderOtimizacao();
 
-    await user.click(screen.getByRole("button", { name: /Gerar alocação/ }));
+    await user.click(screen.getByRole("button", { name: /Gerar cronograma completo/ }));
     await waitFor(() => expect(screen.getByText("A1")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /Ver cronograma gerado/ }));
@@ -201,7 +133,7 @@ describe("Otimizacao", () => {
     const user = userEvent.setup();
     renderOtimizacao();
 
-    await user.click(screen.getByRole("button", { name: /Gerar alocação/ }));
+    await user.click(screen.getByRole("button", { name: /Gerar cronograma completo/ }));
     await waitFor(() => expect(screen.getByText("Sem solução viável.")).toBeInTheDocument());
   });
 
@@ -210,7 +142,7 @@ describe("Otimizacao", () => {
     const user = userEvent.setup();
     renderOtimizacao();
 
-    await user.click(screen.getByRole("button", { name: /Gerar alocação/ }));
+    await user.click(screen.getByRole("button", { name: /Gerar cronograma completo/ }));
     await waitFor(() => expect(screen.getByText("Erro ao gerar alocação.")).toBeInTheDocument());
   });
 });

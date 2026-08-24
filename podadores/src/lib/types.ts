@@ -14,9 +14,14 @@ export interface AlocacaoDiaComStatus {
   locais: LocalAlocadoComStatus[];
 }
 
+export interface PeriodoReferencia {
+  inicio: string;
+  fim: string;
+}
+
 export interface AlocacaoPublicada {
   publicadoEm: string;
-  mesReferencia: { ano: number; mes: number };
+  periodo: PeriodoReferencia;
   alocacoes: AlocacaoDiaComStatus[];
   naoAlocados: LocalAlocado[];
 }

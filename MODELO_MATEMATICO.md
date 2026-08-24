@@ -189,6 +189,74 @@ próxima rodada, caso surja a necessidade.
 
 ---
 
+## Variante: cronograma completo (sem mês fixo)
+
+A versão acima resolve um mês por vez — o que fica de fora vira "fora do
+mês". A Otimização do frontend não pede mais um mês: gera um cronograma
+único cobrindo todo o horizonte de 12 semanas de previsão de uma vez
+(`rodar_modelo_horoprognosis_com_prazos` em `horoprognosis.py`, usada por
+`POST /previsoes/gerar-alocacao`). Duas mudanças em cima do modelo base:
+
+### `D` deixa de ser um mês fixo
+
+`D` passa a ser os dias úteis entre o prazo mais próximo e o mais
+distante entre os locais do lote (`gerar_dias_uteis_intervalo`) — o
+suficiente para caber qualquer alocação válida, sem sobra desnecessária.
+
+### R3-completo — Cada local só pode ser podado até o seu próprio prazo
+
+Cada local `a` tem um prazo próprio, `prazo(a)` — a primeira semana em que
+a previsão da IA indica que a vegetação atinge o limiar de poda (vem de
+`previsoes.py: derivar_locais_de_poda`). Diferente do modelo de mês fixo
+(onde `D` já garantia isso implicitamente, por só conter dias daquele
+mês), aqui isso vira uma restrição explícita:
+
+```
+H[a, c, d] = 0     para todo d ∈ D tal que d > prazo(a)
+```
+
+Implementada sem precisar de uma constraint extra no solver: os dias
+depois do prazo de cada local simplesmente não viram variável de decisão
+(ver `rodar_modelo_horoprognosis_com_prazos`) — mais leve que criar a
+variável e depois forçá-la a zero.
+
+### R4 — Balanceamento de carga entre equipes
+
+Problema observado na prática: como as equipes são intercambiáveis (não
+têm custo nem habilidade diferentes entre si), a Função Objetivo sozinha
+é indiferente entre concentrar tudo numa equipe só ou espalhar por
+todas — ambas valem exatamente o mesmo em prioridade coberta. Resultado:
+com 4 equipes configuradas, o solver podia deixar 2 completamente
+ociosas mesmo sobrando capacidade, só porque nada no modelo preferia uma
+distribuição mais justa.
+
+Correção (`aplicar_balanceamento_de_carga`): duas variáveis contínuas,
+`carga_maxima` e `carga_minima` — o maior e o menor custo total que
+qualquer equipe carrega, somado em todos os dias do período:
+
+```
+carga_minima ≤ Σ (a,d) custo(a) × H[a, c, d] ≤ carga_maxima     para todo c ∈ C
+```
+
+E a Função Objetivo ganha dois termos secundários:
+
+```
+FO_completa = Σ p(a) × H[a, c, d] − εmax × carga_maxima + εmin × carga_minima
+```
+
+`εmax` achata o topo (menos carga na equipe mais sobrecarregada);
+`εmin ≪ εmax` levanta o piso só como desempate — sem ele, minimizar
+apenas o topo pode empatar entre "espalhar por todas" e "concentrar em
+algumas e deixar outras zeradas", já que as duas soluções têm a mesma
+carga máxima. Os dois épsilons são calculados a partir da demanda total
+do lote para nunca somarem mais que 1 ponto de prioridade — ou seja,
+nunca mudam **quais** locais entram no cronograma (isso continua 100%
+decidido por R1/R2/R3-completo/FO original); só desempatam, entre
+soluções de mesma prioridade total, a favor da que distribui melhor a
+carga entre as equipes.
+
+---
+
 ## Tamanho do problema
 
 ```
@@ -212,6 +280,9 @@ variáveis binárias.
   controlado pela IA externa antes de montar o lote `A`.
 - Pesos de prioridade (1/2/3) e custos de dificuldade (1/1,5/3) ficam
   como placeholders — ajustáveis depois, sem mudar a estrutura do modelo.
+- A variante de cronograma completo (sem mês fixo, ver seção acima)
+  acrescenta R3-completo (prazo por local) e R4 (balanceamento entre
+  equipes) por cima do modelo base, sem alterar R1/R2/FO original.
 
 Modelo matemático fechado. Próximo passo natural: implementar o solver
 em PuLP (espelhando `backend/cronomaneger_atos.py`) + uma API FastAPI

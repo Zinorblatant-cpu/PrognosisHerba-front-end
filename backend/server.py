@@ -1,18 +1,20 @@
 """
 Servidor FastAPI — Horoprognosis (alocação de equipes de poda)
 =================================================================
-Recebe um lote de locais de poda (id, prioridade, dificuldade) — enviado
-por um sistema externo (IA) — e devolve a alocação ótima de equipes por
-dia dentro do mês informado, resolvendo o modelo PuLP/CBC de
-horoprognosis.py. Ver MODELO_MATEMATICO.md para a formulação completa.
+Dois jeitos de gerar uma alocação, resolvendo o modelo PuLP/CBC de
+horoprognosis.py (ver MODELO_MATEMATICO.md para a formulação completa):
 
-Sem persistência e sem autenticação: cada chamada a /gerar-alocacao é
-autocontida (todo o lote de locais vem no próprio payload).
+POST /gerar-alocacao            → lote de locais informado manualmente,
+                                   preso a um mês fixo (ano/mês no payload).
+POST /previsoes/gerar-alocacao  → locais derivados das previsões da IA;
+                                   gera o cronograma completo cobrindo todo
+                                   o horizonte de 12 semanas de uma vez (sem
+                                   mês fixo), cada local até o seu prazo.
+GET  /health                     → liveness check.
 
-POST /gerar-alocacao → roda o solver e devolve a alocação + alerta de
-                        capacidade (quando a demanda excede a capacidade
-                        do mês).
-GET  /health          → liveness check.
+Sem autenticação: qualquer chamada aos dois endpoints acima é
+autocontida. A única persistência do backend é a alocação publicada para
+o site dos podadores (ver persistencia.py e os endpoints /alocacao/*).
 
 Desenvolvimento:
     uvicorn server:app --port 8002 --reload
@@ -28,6 +30,7 @@ from horoprognosis import (
     calcular_alerta_capacidade,
     gerar_alocacao,
     rodar_modelo_horoprognosis,
+    rodar_modelo_horoprognosis_com_prazos,
 )
 from persistencia import marcar_conclusao, obter_alocacao_atual, publicar_alocacao
 from previsoes import LIMIAR_PODA_CM, carregar_previsoes, derivar_locais_de_poda
@@ -101,8 +104,6 @@ class PrevisaoRegiao(BaseModel):
 class GerarAlocacaoDePrevisoesRequest(BaseModel):
     quantidadeEquipes: int = Field(ge=1)
     capacidadeDiaria: float = Field(default=CAPACIDADE_DIARIA, gt=0)
-    ano: int | None = Field(default=None, ge=2000, le=2100)
-    mes: int | None = Field(default=None, ge=1, le=12)
     limiarPodaCm: float = Field(default=LIMIAR_PODA_CM, gt=0)
 
 
@@ -114,25 +115,24 @@ class LocalDerivado(BaseModel):
     alturaPrevistaCm: float
 
 
-class MesReferencia(BaseModel):
-    ano: int
-    mes: int
+class PeriodoReferencia(BaseModel):
+    inicio: str
+    fim: str
 
 
 class GerarAlocacaoDePrevisoesResponse(BaseModel):
-    mesReferencia: MesReferencia
+    periodo: PeriodoReferencia
     locaisDerivados: list[LocalDerivado]
     alocacoes: list[AlocacaoDia]
     naoAlocados: list[LocalAlocado]
     alerta: AlertaCapacidade | None = None
-    foraDoMes: list[LocalDerivado]
     semAlertaNoHorizonte: list[str]
 
 
 # ── Alocação publicada (site dos podadores) ────────────────────────────────────
 
 class PublicarAlocacaoRequest(BaseModel):
-    mesReferencia: MesReferencia
+    periodo: PeriodoReferencia
     alocacoes: list[AlocacaoDia]
     naoAlocados: list[LocalAlocado] = []
 
@@ -152,7 +152,7 @@ class AlocacaoDiaComStatus(BaseModel):
 
 class AlocacaoPublicadaResponse(BaseModel):
     publicadoEm: str
-    mesReferencia: MesReferencia
+    periodo: PeriodoReferencia
     alocacoes: list[AlocacaoDiaComStatus]
     naoAlocados: list[LocalAlocado]
 
@@ -231,22 +231,16 @@ def previsoes_endpoint():
 @app.post("/previsoes/gerar-alocacao", response_model=GerarAlocacaoDePrevisoesResponse)
 def gerar_alocacao_de_previsoes_endpoint(req: GerarAlocacaoDePrevisoesRequest):
     previsoes = carregar_previsoes()
-    derivado = derivar_locais_de_poda(previsoes, ano=req.ano, mes=req.mes, limiar=req.limiarPodaCm)
+    derivado = derivar_locais_de_poda(previsoes, limiar=req.limiarPodaCm)
 
     if not derivado["locais"]:
         raise HTTPException(
             status_code=422,
-            detail="Nenhuma região atinge o limiar de poda no mês solicitado.",
+            detail="Nenhuma região atinge o limiar de poda no horizonte de previsão.",
         )
 
-    ano, mes = derivado["anoUsado"], derivado["mesUsado"]
-    locais = [
-        {"id": loc["id"], "prioridade": loc["prioridade"], "dificuldade": loc["dificuldade"]}
-        for loc in derivado["locais"]
-    ]
-
-    prob, locais, equipes, dias = rodar_modelo_horoprognosis(
-        locais, req.quantidadeEquipes, ano, mes,
+    prob, locais, equipes, dias = rodar_modelo_horoprognosis_com_prazos(
+        derivado["locais"], req.quantidadeEquipes,
         capacidade_diaria=req.capacidadeDiaria,
     )
 
@@ -275,15 +269,15 @@ def gerar_alocacao_de_previsoes_endpoint(req: GerarAlocacaoDePrevisoesRequest):
 
     alerta = calcular_alerta_capacidade(
         locais, req.quantidadeEquipes, dias, capacidade_diaria=req.capacidadeDiaria,
+        rotulo_periodo="período",
     )
 
     return GerarAlocacaoDePrevisoesResponse(
-        mesReferencia=MesReferencia(ano=ano, mes=mes),
+        periodo=PeriodoReferencia(inicio=dias[0], fim=dias[-1]),
         locaisDerivados=derivado["locais"],
         alocacoes=alocacoes,
         naoAlocados=nao_alocados,
         alerta=AlertaCapacidade(**alerta) if alerta else None,
-        foraDoMes=derivado["foraDoMes"],
         semAlertaNoHorizonte=derivado["semAlertaNoHorizonte"],
     )
 
@@ -293,7 +287,7 @@ def gerar_alocacao_de_previsoes_endpoint(req: GerarAlocacaoDePrevisoesRequest):
 @app.post("/alocacao/publicar", response_model=AlocacaoPublicadaResponse)
 def publicar_alocacao_endpoint(req: PublicarAlocacaoRequest):
     publicar_alocacao(
-        mes_referencia=req.mesReferencia.model_dump(),
+        periodo=req.periodo.model_dump(),
         alocacoes=[a.model_dump() for a in req.alocacoes],
         nao_alocados=[l.model_dump() for l in req.naoAlocados],
     )

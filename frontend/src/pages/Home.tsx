@@ -8,6 +8,7 @@ import {
   MapPin,
   Users,
   TriangleAlert,
+  MonitorCheck,
 } from "lucide-react";
 import { KpiCard } from "../components/ui/KpiCard";
 import { Card, CardHeader } from "../components/ui/Card";
@@ -27,7 +28,7 @@ const FUNCOES = [
     icon: SlidersHorizontal,
     numero: "02",
     title: "Otimização",
-    description: "Gera a alocação ótima de equipes de poda a partir das previsões, via solver PuLP.",
+    description: "Gera o cronograma completo de poda, cobrindo todo o horizonte de 12 semanas, via solver PuLP.",
   },
   {
     to: "/cronograma",
@@ -35,6 +36,13 @@ const FUNCOES = [
     numero: "03",
     title: "Cronograma",
     description: "Visualiza a grade de alocação equipe × dia produzida pela otimização.",
+  },
+  {
+    to: "/monitoramento",
+    icon: MonitorCheck,
+    numero: "04",
+    title: "Monitoramento",
+    description: "Acompanha em tempo real quais locais as equipes já marcaram como concluídos.",
   },
 ];
 
@@ -51,7 +59,7 @@ export function Home() {
       totalEquipes: equipes.size,
       totalDias: dias.size,
       naoAlocados: resultado.naoAlocados.length,
-      mesReferencia: resultado.mesReferencia,
+      periodo: resultado.periodo,
     };
   }, [resultado]);
 
@@ -60,10 +68,10 @@ export function Home() {
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">PrognosisHerba</p>
         <h1 className="mt-3 text-4xl font-bold tracking-tight text-fg">O que você quer fazer?</h1>
-        <p className="mt-2.5 text-sm text-fg-muted">Escolha uma das três etapas do fluxo de manejo de poda.</p>
+        <p className="mt-2.5 text-sm text-fg-muted">Escolha uma das etapas do fluxo de manejo de poda.</p>
       </div>
 
-      <div className="grid w-full max-w-4xl grid-cols-1 gap-5 text-left sm:grid-cols-3">
+      <div className="grid w-full max-w-5xl grid-cols-1 gap-5 text-left sm:grid-cols-2 lg:grid-cols-4">
         {FUNCOES.map(({ to, icon: Icon, numero, title, description }) => (
           <Link
             key={to}
@@ -85,13 +93,13 @@ export function Home() {
         ))}
       </div>
 
-      <div className="w-full max-w-4xl text-left">
+      <div className="w-full max-w-5xl text-left">
         <Card>
           <CardHeader
             title="Status ao vivo"
             subtitle={
               status
-                ? `Mês de referência: ${String(status.mesReferencia.mes).padStart(2, "0")}/${status.mesReferencia.ano}`
+                ? `Período: ${status.periodo.inicio} a ${status.periodo.fim}`
                 : "Nenhuma alocação foi gerada nesta sessão ainda"
             }
           />

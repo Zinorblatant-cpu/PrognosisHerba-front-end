@@ -5,12 +5,11 @@ import { AlocacaoProvider, useAlocacao } from "./AlocacaoContext";
 import type { GerarAlocacaoDePrevisoesResponse } from "../lib/types";
 
 const RESULTADO_FAKE = {
-  mesReferencia: { ano: 2026, mes: 9 },
+  periodo: { inicio: "2026-09-14", fim: "2026-09-14" },
   locaisDerivados: [],
   alocacoes: [],
   naoAlocados: [],
   alerta: null,
-  foraDoMes: [],
   semAlertaNoHorizonte: [],
 } satisfies GerarAlocacaoDePrevisoesResponse;
 
@@ -18,7 +17,7 @@ function Consumidor() {
   const { resultado, setResultado } = useAlocacao();
   return (
     <div>
-      <p>{resultado ? `mes:${resultado.mesReferencia.mes}` : "sem resultado"}</p>
+      <p>{resultado ? `periodo:${resultado.periodo.inicio}` : "sem resultado"}</p>
       <button onClick={() => setResultado(RESULTADO_FAKE)}>gerar</button>
     </div>
   );
@@ -37,7 +36,7 @@ describe("AlocacaoContext", () => {
 
     await user.click(screen.getByRole("button", { name: "gerar" }));
 
-    expect(screen.getByText("mes:9")).toBeInTheDocument();
+    expect(screen.getByText("periodo:2026-09-14")).toBeInTheDocument();
   });
 
   it("lança erro ao usar useAlocacao fora do provider", () => {

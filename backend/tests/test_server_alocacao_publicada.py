@@ -34,10 +34,10 @@ ALOCACOES = [
 NAO_ALOCADOS = [{"localId": "local_9", "prioridade": "baixa", "dificuldade": "facil"}]
 
 
-def _publicar(alocacoes=ALOCACOES, nao_alocados=NAO_ALOCADOS, ano=2026, mes=9):
+def _publicar(alocacoes=ALOCACOES, nao_alocados=NAO_ALOCADOS, inicio="2026-09-14", fim="2026-09-14"):
     return client.post(
         "/alocacao/publicar",
-        json={"mesReferencia": {"ano": ano, "mes": mes}, "alocacoes": alocacoes, "naoAlocados": nao_alocados},
+        json={"periodo": {"inicio": inicio, "fim": fim}, "alocacoes": alocacoes, "naoAlocados": nao_alocados},
     )
 
 
@@ -52,7 +52,7 @@ class TestPublicarAlocacao:
         res = _publicar()
         assert res.status_code == 200
         data = res.json()
-        assert data["mesReferencia"] == {"ano": 2026, "mes": 9}
+        assert data["periodo"] == {"inicio": "2026-09-14", "fim": "2026-09-14"}
         assert len(data["alocacoes"]) == 1
 
     def test_locais_comecam_nao_concluidos(self):
@@ -65,13 +65,13 @@ class TestPublicarAlocacao:
         _publicar()
         res = client.get("/alocacao/atual")
         assert res.status_code == 200
-        assert res.json()["mesReferencia"] == {"ano": 2026, "mes": 9}
+        assert res.json()["periodo"] == {"inicio": "2026-09-14", "fim": "2026-09-14"}
 
     def test_publicar_de_novo_substitui_a_anterior(self):
-        _publicar(mes=9)
-        _publicar(mes=10)
+        _publicar(inicio="2026-09-14", fim="2026-09-14")
+        _publicar(inicio="2026-10-01", fim="2026-10-01")
         res = client.get("/alocacao/atual")
-        assert res.json()["mesReferencia"] == {"ano": 2026, "mes": 10}
+        assert res.json()["periodo"] == {"inicio": "2026-10-01", "fim": "2026-10-01"}
 
 
 class TestConcluirLocal:

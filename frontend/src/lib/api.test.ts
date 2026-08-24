@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, gerarAlocacaoDePrevisoes, getPrevisoes, publicarAlocacao, resolveBaseUrl } from "./api";
+import {
+  ApiError,
+  gerarAlocacaoDePrevisoes,
+  getAlocacaoAtual,
+  getPrevisoes,
+  publicarAlocacao,
+  resolveBaseUrl,
+} from "./api";
 
 const BASE_URL = "http://127.0.0.1:8002";
 
@@ -44,7 +51,7 @@ describe("api", () => {
   });
 
   it("gerarAlocacaoDePrevisoes faz POST com o payload serializado", async () => {
-    const resposta = { mesReferencia: { ano: 2026, mes: 9 } };
+    const resposta = { periodo: { inicio: "2026-09-14", fim: "2026-11-02" } };
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(jsonResponse(resposta));
 
     const payload = { quantidadeEquipes: 4 };
@@ -61,7 +68,7 @@ describe("api", () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(jsonResponse({ ok: true }));
 
     const payload = {
-      mesReferencia: { ano: 2026, mes: 9 },
+      periodo: { inicio: "2026-09-14", fim: "2026-11-02" },
       alocacoes: [],
       naoAlocados: [],
     };
@@ -71,6 +78,35 @@ describe("api", () => {
       `${BASE_URL}/alocacao/publicar`,
       expect.objectContaining({ method: "POST", body: JSON.stringify(payload) }),
     );
+  });
+
+  it("getAlocacaoAtual faz GET em /alocacao/atual e devolve o corpo", async () => {
+    const dados = { publicadoEm: "x", periodo: { inicio: "2026-09-14", fim: "2026-09-14" }, alocacoes: [], naoAlocados: [] };
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(jsonResponse(dados));
+
+    const resultado = await getAlocacaoAtual();
+
+    expect(resultado).toEqual(dados);
+    expect(fetch).toHaveBeenCalledWith(
+      `${BASE_URL}/alocacao/atual`,
+      expect.objectContaining({ headers: { "Content-Type": "application/json" } }),
+    );
+  });
+
+  it("getAlocacaoAtual devolve null quando o backend responde 404", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      jsonResponse({ detail: "Nenhuma alocação foi publicada ainda." }, { ok: false, status: 404 }),
+    );
+
+    await expect(getAlocacaoAtual()).resolves.toBeNull();
+  });
+
+  it("getAlocacaoAtual relança erros que não são 404", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      jsonResponse({ detail: "Erro interno." }, { ok: false, status: 500 }),
+    );
+
+    await expect(getAlocacaoAtual()).rejects.toMatchObject({ status: 500, message: "Erro interno." });
   });
 
   it("lança ApiError com status 0 quando o fetch falha (backend fora do ar)", async () => {

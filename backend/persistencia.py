@@ -36,8 +36,8 @@ def _conectar(caminho_db):
         CREATE TABLE IF NOT EXISTS alocacao_publicada (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             publicado_em TEXT NOT NULL,
-            mes_referencia_ano INTEGER NOT NULL,
-            mes_referencia_mes INTEGER NOT NULL,
+            periodo_inicio TEXT NOT NULL,
+            periodo_fim TEXT NOT NULL,
             alocacoes_json TEXT NOT NULL,
             nao_alocados_json TEXT NOT NULL
         )
@@ -58,7 +58,7 @@ def _conectar(caminho_db):
     return conn
 
 
-def publicar_alocacao(mes_referencia, alocacoes, nao_alocados, caminho_db=None):
+def publicar_alocacao(periodo, alocacoes, nao_alocados, caminho_db=None):
     """Substitui a alocação publicada e limpa as conclusões antigas."""
     conn = _conectar(caminho_db or CAMINHO_DB_PADRAO)
     try:
@@ -66,19 +66,19 @@ def publicar_alocacao(mes_referencia, alocacoes, nao_alocados, caminho_db=None):
         conn.execute(
             """
             INSERT INTO alocacao_publicada
-                (id, publicado_em, mes_referencia_ano, mes_referencia_mes, alocacoes_json, nao_alocados_json)
+                (id, publicado_em, periodo_inicio, periodo_fim, alocacoes_json, nao_alocados_json)
             VALUES (1, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 publicado_em=excluded.publicado_em,
-                mes_referencia_ano=excluded.mes_referencia_ano,
-                mes_referencia_mes=excluded.mes_referencia_mes,
+                periodo_inicio=excluded.periodo_inicio,
+                periodo_fim=excluded.periodo_fim,
                 alocacoes_json=excluded.alocacoes_json,
                 nao_alocados_json=excluded.nao_alocados_json
             """,
             (
                 datetime.now(timezone.utc).isoformat(),
-                mes_referencia["ano"],
-                mes_referencia["mes"],
+                periodo["inicio"],
+                periodo["fim"],
                 json.dumps(alocacoes),
                 json.dumps(nao_alocados),
             ),
@@ -94,14 +94,14 @@ def obter_alocacao_atual(caminho_db=None):
     try:
         linha = conn.execute(
             """
-            SELECT publicado_em, mes_referencia_ano, mes_referencia_mes, alocacoes_json, nao_alocados_json
+            SELECT publicado_em, periodo_inicio, periodo_fim, alocacoes_json, nao_alocados_json
             FROM alocacao_publicada WHERE id = 1
             """
         ).fetchone()
         if linha is None:
             return None
 
-        publicado_em, ano, mes, alocacoes_json, nao_alocados_json = linha
+        publicado_em, periodo_inicio, periodo_fim, alocacoes_json, nao_alocados_json = linha
         alocacoes = json.loads(alocacoes_json)
         nao_alocados = json.loads(nao_alocados_json)
 
@@ -116,7 +116,7 @@ def obter_alocacao_atual(caminho_db=None):
 
         return {
             "publicadoEm": publicado_em,
-            "mesReferencia": {"ano": ano, "mes": mes},
+            "periodo": {"inicio": periodo_inicio, "fim": periodo_fim},
             "alocacoes": alocacoes,
             "naoAlocados": nao_alocados,
         }

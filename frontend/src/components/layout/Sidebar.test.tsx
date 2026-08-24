@@ -15,6 +15,7 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: /Previsões IA/ })).toHaveAttribute("href", "/previsoes");
     expect(screen.getByRole("link", { name: /Otimização/ })).toHaveAttribute("href", "/otimizacao");
     expect(screen.getByRole("link", { name: /Cronograma/ })).toHaveAttribute("href", "/cronograma");
+    expect(screen.getByRole("link", { name: /Monitoramento/ })).toHaveAttribute("href", "/monitoramento");
   });
 
   it("marca o item ativo com base na rota atual", () => {

@@ -31,7 +31,7 @@ describe("api", () => {
   });
 
   it("obterAlocacaoAtual faz GET em /alocacao/atual e devolve o corpo", async () => {
-    const dados = { publicadoEm: "x", mesReferencia: { ano: 2026, mes: 9 }, alocacoes: [], naoAlocados: [] };
+    const dados = { publicadoEm: "x", periodo: { inicio: "2026-09-14", fim: "2026-09-14" }, alocacoes: [], naoAlocados: [] };
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(jsonResponse(dados));
 
     const resultado = await obterAlocacaoAtual();
@@ -66,7 +66,7 @@ describe("api", () => {
   });
 
   it("concluirLocal faz POST em /alocacao/locais/concluir com o payload serializado", async () => {
-    const resposta = { publicadoEm: "x", mesReferencia: { ano: 2026, mes: 9 }, alocacoes: [], naoAlocados: [] };
+    const resposta = { publicadoEm: "x", periodo: { inicio: "2026-09-14", fim: "2026-09-14" }, alocacoes: [], naoAlocados: [] };
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(jsonResponse(resposta));
 
     const payload = { equipeId: "equipe_1", dia: "2026-09-14", localId: "local_1", concluido: true };

@@ -1,11 +1,12 @@
 import { NavLink } from "react-router-dom";
-import { TrendingUp, SlidersHorizontal, CalendarDays, LayoutGrid, Sprout } from "lucide-react";
+import { TrendingUp, SlidersHorizontal, CalendarDays, LayoutGrid, Sprout, MonitorCheck } from "lucide-react";
 
 const NAV_ITEMS = [
   { to: "/", label: "Início", icon: LayoutGrid, end: true },
   { to: "/previsoes", label: "Previsões IA", icon: TrendingUp },
   { to: "/otimizacao", label: "Otimização", icon: SlidersHorizontal },
   { to: "/cronograma", label: "Cronograma", icon: CalendarDays },
+  { to: "/monitoramento", label: "Monitoramento", icon: MonitorCheck },
 ];
 
 export function Sidebar() {

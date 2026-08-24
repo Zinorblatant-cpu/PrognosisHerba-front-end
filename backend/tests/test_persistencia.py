@@ -16,7 +16,7 @@ def db_path(tmp_path):
     return str(tmp_path / "podadores.db")
 
 
-MES_REFERENCIA = {"ano": 2026, "mes": 9}
+PERIODO = {"inicio": "2026-09-14", "fim": "2026-09-14"}
 
 ALOCACOES = [
     {
@@ -45,20 +45,20 @@ class TestObterAlocacaoAtualSemPublicacao:
 class TestPublicarAlocacao:
     def test_cria_o_arquivo_do_banco(self, db_path):
         assert not os.path.exists(db_path)
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
         assert os.path.exists(db_path)
 
     def test_alocacao_atual_reflete_o_que_foi_publicado(self, db_path):
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
         atual = persistencia.obter_alocacao_atual(caminho_db=db_path)
 
-        assert atual["mesReferencia"] == MES_REFERENCIA
+        assert atual["periodo"] == PERIODO
         assert atual["naoAlocados"] == NAO_ALOCADOS
         assert len(atual["alocacoes"]) == 2
         assert "publicadoEm" in atual and atual["publicadoEm"]
 
     def test_locais_comecam_nao_concluidos(self, db_path):
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
         atual = persistencia.obter_alocacao_atual(caminho_db=db_path)
 
         for aloc in atual["alocacoes"]:
@@ -66,7 +66,7 @@ class TestPublicarAlocacao:
                 assert local["concluido"] is False
 
     def test_publicar_de_novo_substitui_a_alocacao_anterior(self, db_path):
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
 
         nova_alocacao = [
             {
@@ -75,18 +75,19 @@ class TestPublicarAlocacao:
                 "locais": [{"localId": "local_9", "prioridade": "alta", "dificuldade": "facil"}],
             }
         ]
-        persistencia.publicar_alocacao({"ano": 2026, "mes": 10}, nova_alocacao, [], caminho_db=db_path)
+        novo_periodo = {"inicio": "2026-10-01", "fim": "2026-10-01"}
+        persistencia.publicar_alocacao(novo_periodo, nova_alocacao, [], caminho_db=db_path)
 
         atual = persistencia.obter_alocacao_atual(caminho_db=db_path)
-        assert atual["mesReferencia"] == {"ano": 2026, "mes": 10}
+        assert atual["periodo"] == novo_periodo
         assert len(atual["alocacoes"]) == 1
         assert atual["alocacoes"][0]["locais"][0]["localId"] == "local_9"
 
     def test_publicar_de_novo_limpa_conclusoes_antigas(self, db_path):
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
         persistencia.marcar_conclusao("equipe_1", "2026-09-14", "local_1", True, caminho_db=db_path)
 
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
 
         atual = persistencia.obter_alocacao_atual(caminho_db=db_path)
         local_1 = next(
@@ -100,7 +101,7 @@ class TestPublicarAlocacao:
 
 class TestMarcarConclusao:
     def test_marca_um_local_como_concluido(self, db_path):
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
         persistencia.marcar_conclusao("equipe_1", "2026-09-14", "local_1", True, caminho_db=db_path)
 
         atual = persistencia.obter_alocacao_atual(caminho_db=db_path)
@@ -113,7 +114,7 @@ class TestMarcarConclusao:
         assert local_1["concluido"] is True
 
     def test_nao_afeta_outros_locais(self, db_path):
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
         persistencia.marcar_conclusao("equipe_1", "2026-09-14", "local_1", True, caminho_db=db_path)
 
         atual = persistencia.obter_alocacao_atual(caminho_db=db_path)
@@ -126,7 +127,7 @@ class TestMarcarConclusao:
         assert local_2["concluido"] is False
 
     def test_desmarcar_um_local_ja_concluido(self, db_path):
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
         persistencia.marcar_conclusao("equipe_1", "2026-09-14", "local_1", True, caminho_db=db_path)
         persistencia.marcar_conclusao("equipe_1", "2026-09-14", "local_1", False, caminho_db=db_path)
 
@@ -140,7 +141,7 @@ class TestMarcarConclusao:
         assert local_1["concluido"] is False
 
     def test_marcar_o_mesmo_local_duas_vezes_nao_gera_erro(self, db_path):
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
         persistencia.marcar_conclusao("equipe_1", "2026-09-14", "local_1", True, caminho_db=db_path)
         persistencia.marcar_conclusao("equipe_1", "2026-09-14", "local_1", True, caminho_db=db_path)
 
@@ -154,7 +155,7 @@ class TestMarcarConclusao:
         assert local_1["concluido"] is True
 
     def test_desmarcar_local_nunca_marcado_nao_gera_erro(self, db_path):
-        persistencia.publicar_alocacao(MES_REFERENCIA, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
+        persistencia.publicar_alocacao(PERIODO, ALOCACOES, NAO_ALOCADOS, caminho_db=db_path)
         persistencia.marcar_conclusao("equipe_2", "2026-09-14", "local_3", False, caminho_db=db_path)
 
         atual = persistencia.obter_alocacao_atual(caminho_db=db_path)
