@@ -6,6 +6,7 @@ import { Card, CardHeader } from "../components/ui/Card";
 import { Tag } from "../components/ui/Tag";
 import { Button } from "../components/ui/Button";
 import { useAlocacao } from "../state/AlocacaoContext";
+import type { LocalAlocado } from "../lib/types";
 
 const DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
@@ -36,10 +37,15 @@ function diffEmDias(de: string, ate: string) {
   return Math.round((parseData(ate).getTime() - parseData(de).getTime()) / 86_400_000);
 }
 
+function pluralDias(quantidade: number) {
+  return quantidade === 1 ? "dia" : "dias";
+}
+
 function textoFolga(folga: number) {
-  if (folga > 0) return `${folga} ${folga === 1 ? "dia" : "dias"} de folga`;
+  if (folga > 0) return `${folga} ${pluralDias(folga)} de folga`;
   if (folga === 0) return "no limite";
-  return `${-folga} ${folga === -1 ? "dia" : "dias"} atrasado`;
+  const dias = -folga;
+  return `${dias} ${pluralDias(dias)} atrasado`;
 }
 
 /** "equipe_4" -> "Equipe 4" */
@@ -52,7 +58,7 @@ export function Cronograma() {
   const { resultado } = useAlocacao();
 
   const grade = useMemo(() => {
-    if (!resultado) return { equipes: [], dias: [], totalLocais: 0 };
+    if (!resultado) return { equipes: [], dias: [], totalLocais: 0, porEquipeDia: new Map<string, LocalAlocado[]>() };
     const equipes = Array.from(new Set(resultado.alocacoes.map((a) => a.equipeId))).sort();
     const dias = Array.from(new Set(resultado.alocacoes.map((a) => a.dia))).sort();
     const porEquipeDia = new Map(resultado.alocacoes.map((a) => [`${a.equipeId}__${a.dia}`, a.locais]));
@@ -126,7 +132,7 @@ export function Cronograma() {
                     {formatarEquipe(equipe)}
                   </th>
                   {grade.dias.map((dia) => {
-                    const locais = grade.porEquipeDia?.get(`${equipe}__${dia}`) ?? [];
+                    const locais = grade.porEquipeDia.get(`${equipe}__${dia}`) ?? [];
                     return (
                       <td key={dia} className="border-b border-l border-border px-3 py-3">
                         {locais.length === 0 ? (

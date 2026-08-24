@@ -4,7 +4,11 @@ import type {
   PrevisaoRegiao,
 } from "./types";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8002";
+export function resolveBaseUrl(apiBaseUrl: string | undefined): string {
+  return apiBaseUrl ?? "http://127.0.0.1:8002";
+}
+
+const BASE_URL = resolveBaseUrl(import.meta.env.VITE_API_BASE_URL);
 
 class ApiError extends Error {
   status: number;

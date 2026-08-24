@@ -51,8 +51,11 @@ export function Otimizacao() {
 
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs text-fg-muted">Quantidade de equipes</label>
+              <label htmlFor="quantidade-equipes" className="mb-1 block text-xs text-fg-muted">
+                Quantidade de equipes
+              </label>
               <input
+                id="quantidade-equipes"
                 type="number"
                 min={1}
                 value={quantidadeEquipes}
@@ -62,8 +65,11 @@ export function Otimizacao() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs text-fg-muted">Capacidade diária por equipe</label>
+              <label htmlFor="capacidade-diaria" className="mb-1 block text-xs text-fg-muted">
+                Capacidade diária por equipe
+              </label>
               <input
+                id="capacidade-diaria"
                 type="number"
                 min={0.5}
                 step={0.5}
@@ -86,8 +92,11 @@ export function Otimizacao() {
             {!usarMesAutomatico && (
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="mb-1 block text-xs text-fg-muted">Ano</label>
+                  <label htmlFor="ano" className="mb-1 block text-xs text-fg-muted">
+                    Ano
+                  </label>
                   <input
+                    id="ano"
                     type="number"
                     value={ano}
                     onChange={(e) => setAno(Number(e.target.value))}
@@ -95,8 +104,11 @@ export function Otimizacao() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-fg-muted">Mês</label>
+                  <label htmlFor="mes" className="mb-1 block text-xs text-fg-muted">
+                    Mês
+                  </label>
                   <input
+                    id="mes"
                     type="number"
                     min={1}
                     max={12}
