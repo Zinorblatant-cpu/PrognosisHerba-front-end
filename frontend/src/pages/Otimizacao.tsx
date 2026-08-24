@@ -5,7 +5,7 @@ import { PageHeader } from "../components/layout/AppShell";
 import { Card, CardHeader } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Tag } from "../components/ui/Tag";
-import { gerarAlocacaoDePrevisoes, ApiError } from "../lib/api";
+import { gerarAlocacaoDePrevisoes, publicarAlocacao, ApiError } from "../lib/api";
 import { useAlocacao } from "../state/AlocacaoContext";
 
 export function Otimizacao() {
@@ -19,10 +19,12 @@ export function Otimizacao() {
   const [mes, setMes] = useState(9);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [publicadoParaPodadores, setPublicadoParaPodadores] = useState(false);
 
   async function gerar() {
     setCarregando(true);
     setErro(null);
+    setPublicadoParaPodadores(false);
     try {
       const resposta = await gerarAlocacaoDePrevisoes({
         quantidadeEquipes,
@@ -31,6 +33,18 @@ export function Otimizacao() {
         mes: usarMesAutomatico ? undefined : mes,
       });
       setResultado(resposta);
+
+      try {
+        await publicarAlocacao({
+          mesReferencia: resposta.mesReferencia,
+          alocacoes: resposta.alocacoes,
+          naoAlocados: resposta.naoAlocados,
+        });
+        setPublicadoParaPodadores(true);
+      } catch {
+        // Publicar para o site dos podadores é best-effort: se falhar, o
+        // fluxo principal (ver o cronograma aqui) continua funcionando.
+      }
     } catch (e) {
       setErro(e instanceof ApiError ? e.message : "Erro ao gerar alocação.");
     } finally {
@@ -126,6 +140,9 @@ export function Otimizacao() {
             </Button>
 
             {erro && <p className="text-sm text-danger">{erro}</p>}
+            {publicadoParaPodadores && (
+              <p className="text-sm text-primary">✓ Publicado para o site dos podadores.</p>
+            )}
           </div>
         </Card>
 

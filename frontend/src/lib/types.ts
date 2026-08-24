@@ -57,3 +57,9 @@ export interface GerarAlocacaoDePrevisoesResponse {
   foraDoMes: LocalDerivado[];
   semAlertaNoHorizonte: string[];
 }
+
+export interface PublicarAlocacaoRequest {
+  mesReferencia: { ano: number; mes: number };
+  alocacoes: AlocacaoDia[];
+  naoAlocados: LocalAlocado[];
+}

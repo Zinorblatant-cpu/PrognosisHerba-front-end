@@ -4,12 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { Otimizacao } from "./Otimizacao";
 import { AlocacaoProvider } from "../state/AlocacaoContext";
-import { ApiError, gerarAlocacaoDePrevisoes } from "../lib/api";
+import { ApiError, gerarAlocacaoDePrevisoes, publicarAlocacao } from "../lib/api";
 import type { GerarAlocacaoDePrevisoesResponse } from "../lib/types";
 
 vi.mock("../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../lib/api")>("../lib/api");
-  return { ...actual, gerarAlocacaoDePrevisoes: vi.fn() };
+  return { ...actual, gerarAlocacaoDePrevisoes: vi.fn(), publicarAlocacao: vi.fn() };
 });
 
 const RESULTADO: GerarAlocacaoDePrevisoesResponse = {
@@ -47,6 +47,8 @@ function renderOtimizacao() {
 describe("Otimizacao", () => {
   beforeEach(() => {
     vi.mocked(gerarAlocacaoDePrevisoes).mockReset();
+    vi.mocked(publicarAlocacao).mockReset();
+    vi.mocked(publicarAlocacao).mockResolvedValue(undefined);
   });
 
   it("mostra estado inicial sem alocação", () => {
@@ -107,6 +109,27 @@ describe("Otimizacao", () => {
       ano: undefined,
       mes: undefined,
     });
+
+    await waitFor(() =>
+      expect(publicarAlocacao).toHaveBeenCalledWith({
+        mesReferencia: RESULTADO.mesReferencia,
+        alocacoes: RESULTADO.alocacoes,
+        naoAlocados: RESULTADO.naoAlocados,
+      }),
+    );
+    expect(await screen.findByText(/Publicado para o site dos podadores/)).toBeInTheDocument();
+  });
+
+  it("continua funcionando mesmo se a publicação para os podadores falhar", async () => {
+    vi.mocked(gerarAlocacaoDePrevisoes).mockResolvedValue(RESULTADO);
+    vi.mocked(publicarAlocacao).mockRejectedValue(new Error("falha ao publicar"));
+    const user = userEvent.setup();
+    renderOtimizacao();
+
+    await user.click(screen.getByRole("button", { name: /Gerar alocação/ }));
+
+    await waitFor(() => expect(screen.getByText("A1")).toBeInTheDocument());
+    expect(screen.queryByText(/Publicado para o site dos podadores/)).not.toBeInTheDocument();
   });
 
   it("envia ano/mês quando detecção automática está desligada", async () => {

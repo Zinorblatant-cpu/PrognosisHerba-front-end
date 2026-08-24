@@ -2,6 +2,7 @@ import type {
   GerarAlocacaoDePrevisoesRequest,
   GerarAlocacaoDePrevisoesResponse,
   PrevisaoRegiao,
+  PublicarAlocacaoRequest,
 } from "./types";
 
 export function resolveBaseUrl(apiBaseUrl: string | undefined): string {
@@ -49,6 +50,13 @@ export function gerarAlocacaoDePrevisoes(
   payload: GerarAlocacaoDePrevisoesRequest,
 ): Promise<GerarAlocacaoDePrevisoesResponse> {
   return request<GerarAlocacaoDePrevisoesResponse>("/previsoes/gerar-alocacao", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function publicarAlocacao(payload: PublicarAlocacaoRequest): Promise<void> {
+  await request<unknown>("/alocacao/publicar", {
     method: "POST",
     body: JSON.stringify(payload),
   });

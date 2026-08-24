@@ -29,6 +29,7 @@ from horoprognosis import (
     gerar_alocacao,
     rodar_modelo_horoprognosis,
 )
+from persistencia import marcar_conclusao, obter_alocacao_atual, publicar_alocacao
 from previsoes import LIMIAR_PODA_CM, carregar_previsoes, derivar_locais_de_poda
 
 app = FastAPI(title="Horoprognosis API", version="1.0")
@@ -126,6 +127,41 @@ class GerarAlocacaoDePrevisoesResponse(BaseModel):
     alerta: AlertaCapacidade | None = None
     foraDoMes: list[LocalDerivado]
     semAlertaNoHorizonte: list[str]
+
+
+# ── Alocação publicada (site dos podadores) ────────────────────────────────────
+
+class PublicarAlocacaoRequest(BaseModel):
+    mesReferencia: MesReferencia
+    alocacoes: list[AlocacaoDia]
+    naoAlocados: list[LocalAlocado] = []
+
+
+class LocalAlocadoComStatus(BaseModel):
+    localId: str
+    prioridade: str
+    dificuldade: str
+    concluido: bool
+
+
+class AlocacaoDiaComStatus(BaseModel):
+    equipeId: str
+    dia: str
+    locais: list[LocalAlocadoComStatus]
+
+
+class AlocacaoPublicadaResponse(BaseModel):
+    publicadoEm: str
+    mesReferencia: MesReferencia
+    alocacoes: list[AlocacaoDiaComStatus]
+    naoAlocados: list[LocalAlocado]
+
+
+class ConcluirLocalRequest(BaseModel):
+    equipeId: str
+    dia: str
+    localId: str
+    concluido: bool
 
 
 # ── Alocação ─────────────────────────────────────────────────────────────────
@@ -250,6 +286,45 @@ def gerar_alocacao_de_previsoes_endpoint(req: GerarAlocacaoDePrevisoesRequest):
         foraDoMes=derivado["foraDoMes"],
         semAlertaNoHorizonte=derivado["semAlertaNoHorizonte"],
     )
+
+
+# ── Alocação publicada (site dos podadores) ────────────────────────────────────
+
+@app.post("/alocacao/publicar", response_model=AlocacaoPublicadaResponse)
+def publicar_alocacao_endpoint(req: PublicarAlocacaoRequest):
+    publicar_alocacao(
+        mes_referencia=req.mesReferencia.model_dump(),
+        alocacoes=[a.model_dump() for a in req.alocacoes],
+        nao_alocados=[l.model_dump() for l in req.naoAlocados],
+    )
+    return obter_alocacao_atual()
+
+
+@app.get("/alocacao/atual", response_model=AlocacaoPublicadaResponse)
+def obter_alocacao_atual_endpoint():
+    atual = obter_alocacao_atual()
+    if atual is None:
+        raise HTTPException(status_code=404, detail="Nenhuma alocação foi publicada ainda.")
+    return atual
+
+
+@app.post("/alocacao/locais/concluir", response_model=AlocacaoPublicadaResponse)
+def concluir_local_endpoint(req: ConcluirLocalRequest):
+    atual = obter_alocacao_atual()
+    if atual is None:
+        raise HTTPException(status_code=404, detail="Nenhuma alocação foi publicada ainda.")
+
+    local_existe = any(
+        aloc["equipeId"] == req.equipeId
+        and aloc["dia"] == req.dia
+        and any(local["localId"] == req.localId for local in aloc["locais"])
+        for aloc in atual["alocacoes"]
+    )
+    if not local_existe:
+        raise HTTPException(status_code=404, detail="Local não encontrado na alocação publicada.")
+
+    marcar_conclusao(req.equipeId, req.dia, req.localId, req.concluido)
+    return obter_alocacao_atual()
 
 
 # ── Ponto de entrada (dev) ────────────────────────────────────────────────────

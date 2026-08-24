@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, gerarAlocacaoDePrevisoes, getPrevisoes, resolveBaseUrl } from "./api";
+import { ApiError, gerarAlocacaoDePrevisoes, getPrevisoes, publicarAlocacao, resolveBaseUrl } from "./api";
 
 const BASE_URL = "http://127.0.0.1:8002";
 
@@ -53,6 +53,22 @@ describe("api", () => {
     expect(resultado).toEqual(resposta);
     expect(fetch).toHaveBeenCalledWith(
       `${BASE_URL}/previsoes/gerar-alocacao`,
+      expect.objectContaining({ method: "POST", body: JSON.stringify(payload) }),
+    );
+  });
+
+  it("publicarAlocacao faz POST em /alocacao/publicar com o payload serializado", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(jsonResponse({ ok: true }));
+
+    const payload = {
+      mesReferencia: { ano: 2026, mes: 9 },
+      alocacoes: [],
+      naoAlocados: [],
+    };
+    await publicarAlocacao(payload);
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${BASE_URL}/alocacao/publicar`,
       expect.objectContaining({ method: "POST", body: JSON.stringify(payload) }),
     );
   });
