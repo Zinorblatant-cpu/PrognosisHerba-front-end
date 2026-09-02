@@ -10,21 +10,33 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Sprout } from "lucide-react";
 import { PageHeader } from "../components/layout/AppShell";
 import { Card, CardHeader } from "../components/ui/Card";
+import { EstadoCarregando, EstadoErro, EstadoVazio } from "../components/ui/Estado";
 import { Tag } from "../components/ui/Tag";
-import { getPrevisoes } from "../lib/api";
+import { getParametros, getPrevisoes } from "../lib/api";
 import { ApiError } from "../lib/api";
 import type { PrevisaoRegiao } from "../lib/types";
 
-const LIMIAR_PODA_CM = 10;
+/** Fallback só para o primeiro paint: o valor real vem de GET /parametros,
+ * que é a mesma constante que o backend usa para derivar os locais de poda. */
+const LIMIAR_PODA_PADRAO_CM = 9;
 
 export function PrevisoesIA() {
   const [previsoes, setPrevisoes] = useState<PrevisaoRegiao[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [regiaoSelecionada, setRegiaoSelecionada] = useState<string | null>(null);
+  const [limiarPodaCm, setLimiarPodaCm] = useState(LIMIAR_PODA_PADRAO_CM);
 
   useEffect(() => {
+    getParametros()
+      .then((p) => setLimiarPodaCm(p.limiarPodaCm))
+      .catch(() => {
+        // Limiar é só a linha de referência do gráfico: se falhar, segue
+        // com o fallback em vez de derrubar a página inteira.
+      });
+
     getPrevisoes()
       .then((dados) => {
         setPrevisoes(dados);
@@ -37,6 +49,14 @@ export function PrevisoesIA() {
     () => previsoes?.find((r) => r.idRegiao === regiaoSelecionada) ?? null,
     [previsoes, regiaoSelecionada],
   );
+
+  /** Nº de semanas do CSV carregado — null enquanto não há dados. Nunca
+   * cravar o horizonte no texto: ele muda a cada troca de CSV. */
+  const horizonteSemanas = previsoes?.[0]?.semanas.length ?? null;
+
+  const subtitleHorizonte = horizonteSemanas
+    ? `Crescimento previsto para as próximas ${horizonteSemanas} semanas, por região`
+    : "Crescimento previsto por região, semana a semana";
 
   const dadosGrafico = useMemo(
     () =>
@@ -51,22 +71,23 @@ export function PrevisoesIA() {
   if (erro) {
     return (
       <div>
-        <PageHeader title="Previsões IA" subtitle="Crescimento previsto para as próximas 12 semanas, por região" />
-        <Card>
-          <p className="text-sm text-danger">{erro}</p>
-        </Card>
+        <PageHeader title="Previsões IA" subtitle={subtitleHorizonte} />
+        <EstadoErro mensagem={erro} />
       </div>
     );
   }
 
   return (
     <div>
-      <PageHeader title="Previsões IA" subtitle="Crescimento previsto para as próximas 12 semanas, por região" />
+      <PageHeader title="Previsões IA" subtitle={subtitleHorizonte} />
 
       {!previsoes ? (
-        <Card>
-          <p className="text-sm text-fg-muted">Carregando previsões...</p>
-        </Card>
+        <EstadoCarregando mensagem="Carregando previsões..." />
+      ) : previsoes.length === 0 ? (
+        <EstadoVazio
+          icon={<Sprout size={22} />}
+          mensagem="O backend não devolveu nenhuma região. Confira o CSV de previsões apontado por CAMINHO_CSV_PADRAO."
+        />
       ) : (
         <>
           <div className="mb-5 flex flex-wrap gap-2">
@@ -74,10 +95,10 @@ export function PrevisoesIA() {
               <button
                 key={r.idRegiao}
                 onClick={() => setRegiaoSelecionada(r.idRegiao)}
-                className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
                   r.idRegiao === regiaoSelecionada
                     ? "border-primary/60 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(166,255,0,0.15)]"
-                    : "border-border bg-bg-card text-fg-muted hover:border-border-strong hover:text-fg"
+                    : "border-border bg-bg-card text-fg-muted hover:border-border-strong hover:bg-bg-card-raised hover:text-fg"
                 }`}
               >
                 {r.idRegiao}
@@ -86,8 +107,8 @@ export function PrevisoesIA() {
           </div>
 
           {regiao && (
-            <div className="grid grid-cols-3 gap-4">
-              <Card className="col-span-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <Card className="lg:col-span-2">
                 <CardHeader
                   title={`Altura prevista — ${regiao.idRegiao}`}
                   subtitle={`Inclinação do terreno: ${regiao.inclinacaoGraus}° · Área de risco: ${regiao.areaDeRisco}`}
@@ -130,11 +151,11 @@ export function PrevisoesIA() {
                     />
                     <Legend wrapperStyle={{ fontSize: 12, color: "#9ca3af" }} />
                     <ReferenceLine
-                      y={LIMIAR_PODA_CM}
+                      y={limiarPodaCm}
                       stroke="#ff4d4f"
                       strokeDasharray="4 4"
                       label={{
-                        value: `Limiar de poda (${LIMIAR_PODA_CM}cm)`,
+                        value: `Limiar de poda (${limiarPodaCm}cm)`,
                         position: "insideTopLeft",
                         fill: "#ff4d4f",
                         fontSize: 11,
@@ -156,12 +177,19 @@ export function PrevisoesIA() {
               </Card>
 
               <Card>
-                <CardHeader title="Semana a semana" />
+                <CardHeader
+                  title="Semana a semana"
+                  subtitle={`${regiao.semanas.length} semanas · destaque nas que atingem o limiar`}
+                />
                 <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
                   {regiao.semanas.map((s) => (
                     <div
                       key={s.data}
-                      className="flex items-center justify-between rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm"
+                      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        s.alturaPrevistaCm >= limiarPodaCm
+                          ? "border-danger/30 bg-danger/5 hover:border-danger/50"
+                          : "border-border bg-bg-secondary hover:border-border-strong hover:bg-bg-card-raised"
+                      }`}
                     >
                       <div>
                         <p className="font-mono-tabular text-fg">{s.data}</p>

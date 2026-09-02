@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import { Agenda } from "./components/Agenda";
 import { SeletorEquipe } from "./components/SeletorEquipe";
 import { ApiError, concluirLocal, obterAlocacaoAtual } from "./lib/api";
@@ -36,7 +37,8 @@ export default function App() {
 
   if (carregando) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center gap-3">
+        <Loader2 size={18} className="shrink-0 animate-spin text-primary" />
         <p className="text-sm text-fg-muted">Carregando agenda...</p>
       </div>
     );
@@ -44,7 +46,8 @@ export default function App() {
 
   if (erro && !dados) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-6 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+        <TriangleAlert size={22} className="text-danger" />
         <p className="text-sm text-danger">{erro}</p>
       </div>
     );

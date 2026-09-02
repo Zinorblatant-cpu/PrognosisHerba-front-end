@@ -8,9 +8,17 @@ POST /gerar-alocacao            → lote de locais informado manualmente,
                                    preso a um mês fixo (ano/mês no payload).
 POST /previsoes/gerar-alocacao  → locais derivados das previsões da IA;
                                    gera o cronograma completo cobrindo todo
-                                   o horizonte de 12 semanas de uma vez (sem
-                                   mês fixo), cada local até o seu prazo.
+                                   o horizonte de previsão de uma vez (sem
+                                   mês fixo; o número de semanas vem do CSV
+                                   carregado), cada local até o seu prazo.
 GET  /health                     → liveness check.
+GET  /parametros                 → constantes de calibração do backend
+                                   (limiar de poda, capacidade diária), para
+                                   as telas não cravarem os mesmos números.
+GET  /clusterizacao              → agrupa as regiões por rota, altura atual e
+                                   tendência de crescimento (k-means). Camada
+                                   de análise, separada do solver — ver
+                                   clusterizacao.py.
 
 Sem autenticação: qualquer chamada aos dois endpoints acima é
 autocontida. A única persistência do backend é a alocação publicada para
@@ -21,7 +29,7 @@ Desenvolvimento:
 """
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -32,6 +40,7 @@ from horoprognosis import (
     rodar_modelo_horoprognosis,
     rodar_modelo_horoprognosis_com_prazos,
 )
+from clusterizacao import clusterizar_do_csv
 from persistencia import marcar_conclusao, obter_alocacao_atual, publicar_alocacao
 from previsoes import LIMIAR_PODA_CM, carregar_previsoes, derivar_locais_de_poda
 
@@ -86,6 +95,36 @@ class AlocacaoResponse(BaseModel):
     alocacoes: list[AlocacaoDia]
     naoAlocados: list[LocalAlocado]
     alerta: AlertaCapacidade | None = None
+
+
+class RegiaoClusterizada(BaseModel):
+    idRegiao: str
+    rota: str
+    rotaSimulada: bool
+    alturaAtualCm: float
+    tendenciaCmPorSemana: float
+    semanasDesdeUltimaPoda: int
+    clusterId: int
+
+
+class Cluster(BaseModel):
+    clusterId: int
+    rotulo: str
+    regioes: list[str]
+    rotas: list[str]
+    alturaMediaCm: float
+    tendenciaMediaCmPorSemana: float
+
+
+class ClusterizacaoResponse(BaseModel):
+    avisoRota: str
+    clusters: list[Cluster]
+    regioes: list[RegiaoClusterizada]
+
+
+class Parametros(BaseModel):
+    limiarPodaCm: float
+    capacidadeDiaria: float
 
 
 class SemanaPrevisao(BaseModel):
@@ -169,6 +208,21 @@ class ConcluirLocalRequest(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/parametros", response_model=Parametros)
+def parametros_endpoint():
+    """Fonte única dos números de calibração. Existe para o frontend não
+    duplicar `LIMIAR_PODA_CM` (a linha de limiar do gráfico de Previsões IA
+    saía dessincronizada quando o valor mudava aqui)."""
+    return Parametros(limiarPodaCm=LIMIAR_PODA_CM, capacidadeDiaria=CAPACIDADE_DIARIA)
+
+
+@app.get("/clusterizacao", response_model=ClusterizacaoResponse)
+def clusterizacao_endpoint(k: int | None = Query(default=None, ge=1)):
+    """Agrupa as regiões por perfil de crescimento. `k` opcional força o
+    número de grupos; sem ele o número sai do tamanho do lote."""
+    return clusterizar_do_csv(k=k)
 
 
 @app.post("/gerar-alocacao", response_model=AlocacaoResponse)

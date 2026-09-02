@@ -1,17 +1,26 @@
 import { NavLink } from "react-router-dom";
-import { TrendingUp, SlidersHorizontal, CalendarDays, LayoutGrid, Sprout, MonitorCheck } from "lucide-react";
+import {
+  TrendingUp,
+  SlidersHorizontal,
+  CalendarDays,
+  LayoutGrid,
+  Sprout,
+  MonitorCheck,
+  Network,
+} from "lucide-react";
 
 const NAV_ITEMS = [
   { to: "/", label: "Início", icon: LayoutGrid, end: true },
   { to: "/previsoes", label: "Previsões IA", icon: TrendingUp },
   { to: "/otimizacao", label: "Otimização", icon: SlidersHorizontal },
   { to: "/cronograma", label: "Cronograma", icon: CalendarDays },
+  { to: "/agrupamento", label: "Agrupamento", icon: Network },
   { to: "/monitoramento", label: "Monitoramento", icon: MonitorCheck },
 ];
 
 export function Sidebar() {
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-border bg-bg px-4 py-6">
+    <aside className="flex h-screen w-52 shrink-0 flex-col border-r border-border bg-bg px-3 py-6 lg:w-64 lg:px-4">
       <div className="mb-8 flex items-center gap-2.5 px-2">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(166,255,0,0.2)]">
           <Sprout size={19} />

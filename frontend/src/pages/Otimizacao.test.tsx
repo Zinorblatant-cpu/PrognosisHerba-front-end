@@ -79,7 +79,7 @@ describe("Otimizacao", () => {
 
     await waitFor(() => expect(screen.getByText("A1")).toBeInTheDocument());
     expect(screen.getByText("Capacidade insuficiente para o período.")).toBeInTheDocument();
-    expect(screen.getByText(/Sem necessidade de poda nas próximas 12 semanas/)).toBeInTheDocument();
+    expect(screen.getByText(/Sem necessidade de poda no horizonte de previsão/)).toBeInTheDocument();
     expect(screen.getByText("Período: 2026-09-14 a 2026-11-02")).toBeInTheDocument();
     expect(gerarAlocacaoDePrevisoes).toHaveBeenCalledWith({ quantidadeEquipes: 4, capacidadeDiaria: 3 });
 

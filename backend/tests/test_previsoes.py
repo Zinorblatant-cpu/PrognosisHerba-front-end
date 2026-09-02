@@ -24,10 +24,21 @@ class TestCarregarPrevisoes:
         previsoes = carregar_previsoes()
         assert {r["idRegiao"] for r in previsoes} == {"RA-01", "RA-02", "RA-03", "RA-04"}
 
-    def test_doze_semanas_por_regiao(self):
+    def test_todas_as_regioes_tem_o_mesmo_horizonte(self):
+        # Genérico de propósito: o horizonte (12, 52, ...) vem do CSV, o
+        # que o carregador garante é que todas as regiões tenham o mesmo
+        # número de semanas e que nenhuma venha vazia.
         previsoes = carregar_previsoes()
-        for regiao in previsoes:
-            assert len(regiao["semanas"]) == 12
+        horizontes = {len(regiao["semanas"]) for regiao in previsoes}
+        assert len(horizontes) == 1
+        assert horizontes.pop() > 0
+
+    def test_coluna_extra_do_csv_nao_quebra_a_carga(self):
+        # O CSV padrão tem `houve_poda`, que este módulo ainda não usa —
+        # o DictReader ignora a coluna e as semanas saem só com os campos
+        # do contrato.
+        previsoes = carregar_previsoes()
+        assert set(previsoes[0]["semanas"][0]) == {"data", "alturaPrevistaCm", "nivelAlerta"}
 
     def test_semanas_mantem_ordem_cronologica(self):
         previsoes = carregar_previsoes()
@@ -144,10 +155,25 @@ class TestPrevisoesEndpoint:
         assert res.status_code == 200
         assert len(res.json()) == 4
 
-    def test_cada_regiao_tem_doze_semanas(self):
+    def test_endpoint_devolve_o_horizonte_completo_do_csv(self):
+        horizonte = len(carregar_previsoes()[0]["semanas"])
         res = client.get("/previsoes")
         for regiao in res.json():
-            assert len(regiao["semanas"]) == 12
+            assert len(regiao["semanas"]) == horizonte
+
+
+# ── GET /parametros ───────────────────────────────────────────────────────────
+
+class TestParametrosEndpoint:
+    def test_devolve_o_limiar_em_uso_pelo_backend(self):
+        res = client.get("/parametros")
+        assert res.status_code == 200
+        assert res.json()["limiarPodaCm"] == LIMIAR_PODA_CM
+
+    def test_devolve_a_capacidade_diaria_padrao(self):
+        from horoprognosis import CAPACIDADE_DIARIA
+
+        assert client.get("/parametros").json()["capacidadeDiaria"] == CAPACIDADE_DIARIA
 
 
 # ── POST /previsoes/gerar-alocacao ───────────────────────────────────────────
@@ -190,8 +216,13 @@ class TestGerarAlocacaoDePrevisoesEndpoint:
         res = client.post("/previsoes/gerar-alocacao", json={"quantidadeEquipes": 0})
         assert res.status_code == 422
 
-    def test_limiar_padrao_e_dez_cm(self):
-        assert LIMIAR_PODA_CM == 10.0
+    def test_limiar_padrao_e_alcancado_pelo_csv_padrao(self):
+        # Guarda o acoplamento entre LIMIAR_PODA_CM e o CSV padrão: se uma
+        # troca de arquivo deixar a curva inteira abaixo do limiar (foi o
+        # que aconteceu ao migrar para o CSV de 52 semanas, onde a previsão
+        # já embute os cortes), este endpoint devolveria 422 para tudo.
+        derivado = derivar_locais_de_poda(carregar_previsoes(), limiar=LIMIAR_PODA_CM)
+        assert derivado["locais"], "nenhuma região cruza LIMIAR_PODA_CM no CSV padrão"
 
     def test_limiar_tao_alto_que_nada_precisa_de_poda_retorna_422(self):
         res = client.post(

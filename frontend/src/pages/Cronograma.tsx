@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, CalendarDays } from "lucide-react";
 import { PageHeader } from "../components/layout/AppShell";
 import { Card, CardHeader } from "../components/ui/Card";
+import { EstadoVazio } from "../components/ui/Estado";
 import { Tag } from "../components/ui/Tag";
 import { Button } from "../components/ui/Button";
 import { useAlocacao } from "../state/AlocacaoContext";
@@ -76,14 +77,15 @@ export function Cronograma() {
     return (
       <div>
         <PageHeader title="Cronograma" subtitle="Grade de alocação equipe × dia" />
-        <Card>
-          <p className="mb-4 text-sm text-fg-muted">
-            Nenhuma alocação foi gerada ainda. Vá até Otimização e rode o solver a partir das previsões da IA.
-          </p>
-          <Link to="/otimizacao">
-            <Button>Ir para Otimização</Button>
-          </Link>
-        </Card>
+        <EstadoVazio
+          icon={<CalendarDays size={22} />}
+          mensagem="Nenhuma alocação foi gerada ainda. Vá até Otimização e rode o solver a partir das previsões da IA."
+          acao={
+            <Link to="/otimizacao">
+              <Button>Ir para Otimização</Button>
+            </Link>
+          }
+        />
       </div>
     );
   }
@@ -203,7 +205,7 @@ export function Cronograma() {
               return (
                 <li
                   key={loc.localId}
-                  className="flex items-center justify-between gap-3 border-t border-border pt-2 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-border pt-2 text-sm"
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-fg">{loc.localId}</span>

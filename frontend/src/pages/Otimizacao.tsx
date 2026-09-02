@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, TriangleAlert } from "lucide-react";
+import { Loader2, TriangleAlert, SlidersHorizontal } from "lucide-react";
 import { PageHeader } from "../components/layout/AppShell";
 import { Card, CardHeader } from "../components/ui/Card";
+import { EstadoVazio } from "../components/ui/Estado";
 import { Button } from "../components/ui/Button";
 import { Tag } from "../components/ui/Tag";
 import { gerarAlocacaoDePrevisoes, publicarAlocacao, ApiError } from "../lib/api";
@@ -48,11 +49,11 @@ export function Otimizacao() {
     <div>
       <PageHeader
         title="Otimização"
-        subtitle="Gera o cronograma completo de poda a partir das previsões da IA, cobrindo todo o horizonte de 12 semanas (modelo horoprognosis / PuLP)"
+        subtitle="Gera o cronograma completo de poda a partir das previsões da IA, cobrindo todo o horizonte de previsão (modelo horoprognosis / PuLP)"
       />
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="lg:sticky lg:top-0 lg:self-start">
           <CardHeader title="Parâmetros" subtitle="Ajuste e rode o solver" />
 
           <div className="space-y-4">
@@ -66,7 +67,7 @@ export function Otimizacao() {
                 min={1}
                 value={quantidadeEquipes}
                 onChange={(e) => setQuantidadeEquipes(Number(e.target.value))}
-                className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-fg focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-fg transition-colors hover:border-border-strong focus:border-primary focus:outline-none"
               />
             </div>
 
@@ -81,7 +82,7 @@ export function Otimizacao() {
                 step={0.5}
                 value={capacidadeDiaria}
                 onChange={(e) => setCapacidadeDiaria(Number(e.target.value))}
-                className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-fg focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-fg transition-colors hover:border-border-strong focus:border-primary focus:outline-none"
               />
             </div>
 
@@ -90,14 +91,19 @@ export function Otimizacao() {
               Gerar cronograma completo
             </Button>
 
-            {erro && <p className="text-sm text-danger">{erro}</p>}
+            {erro && (
+              <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+                <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+                <p>{erro}</p>
+              </div>
+            )}
             {publicadoParaPodadores && (
               <p className="text-sm text-primary">✓ Publicado para o site dos podadores.</p>
             )}
           </div>
         </Card>
 
-        <Card className="col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader
             title="Locais derivados da previsão"
             subtitle={
@@ -108,7 +114,10 @@ export function Otimizacao() {
           />
 
           {!resultado ? (
-            <p className="text-sm text-fg-muted">Nenhuma alocação gerada ainda.</p>
+            <EstadoVazio
+              icon={<SlidersHorizontal size={22} />}
+              mensagem="Nenhuma alocação gerada ainda."
+            />
           ) : (
             <>
               {resultado.alerta && (
@@ -118,7 +127,8 @@ export function Otimizacao() {
                 </div>
               )}
 
-              <table className="w-full text-left text-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] text-left text-sm">
                 <thead>
                   <tr className="text-xs text-fg-muted">
                     <th className="pb-2 font-normal">Região</th>
@@ -130,7 +140,7 @@ export function Otimizacao() {
                 </thead>
                 <tbody>
                   {resultado.locaisDerivados.map((loc) => (
-                    <tr key={loc.id} className="border-t border-border">
+                    <tr key={loc.id} className="border-t border-border transition-colors hover:bg-white/[0.02]">
                       <td className="py-2 text-fg">{loc.id}</td>
                       <td className="py-2">
                         <Tag nivel={loc.prioridade} />
@@ -141,11 +151,12 @@ export function Otimizacao() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
 
               {resultado.semAlertaNoHorizonte.length > 0 && (
                 <p className="mt-4 text-xs text-fg-muted">
-                  Sem necessidade de poda nas próximas 12 semanas: {resultado.semAlertaNoHorizonte.join(", ")}.
+                  Sem necessidade de poda no horizonte de previsão: {resultado.semAlertaNoHorizonte.join(", ")}.
                 </p>
               )}
 

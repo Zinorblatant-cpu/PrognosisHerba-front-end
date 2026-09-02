@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, MonitorCheck } from "lucide-react";
 import { PageHeader } from "../components/layout/AppShell";
 import { Card, CardHeader } from "../components/ui/Card";
+import { EstadoErro, EstadoVazio } from "../components/ui/Estado";
 import { StatusTag } from "../components/ui/Tag";
 import { Button } from "../components/ui/Button";
 import { getAlocacaoAtual, ApiError } from "../lib/api";
@@ -90,19 +91,14 @@ export function Monitoramento() {
         }
       />
 
-      {erro && (
-        <Card className="mb-4">
-          <p className="text-sm text-danger">{erro}</p>
-        </Card>
-      )}
+      {erro && <EstadoErro mensagem={erro} className="mb-4" />}
 
       {!dados ? (
         !erro && (
-          <Card>
-            <p className="text-sm text-fg-muted">
-              Nenhuma alocação foi publicada ainda. Rode a Otimização para começar a monitorar.
-            </p>
-          </Card>
+          <EstadoVazio
+            icon={<MonitorCheck size={22} />}
+            mensagem="Nenhuma alocação foi publicada ainda. Rode a Otimização para começar a monitorar."
+          />
         )
       ) : (
         <>
@@ -119,7 +115,7 @@ export function Monitoramento() {
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-secondary">
               <div
-                className="h-full rounded-full bg-primary transition-all"
+                className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
                 style={{ width: `${porcentagem}%` }}
               />
             </div>
@@ -140,7 +136,7 @@ export function Monitoramento() {
                         {aloc.locais.map((local) => (
                           <li
                             key={local.localId}
-                            className="flex items-center justify-between gap-2 rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-sm"
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-sm transition-colors hover:border-border-strong hover:bg-bg-card-raised"
                           >
                             <span className="text-fg">{local.localId}</span>
                             <StatusTag status={local.concluido ? "Concluído" : "Pendente"} />

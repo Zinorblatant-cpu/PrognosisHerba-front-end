@@ -21,7 +21,7 @@ o backend primeiro**.
 
 ## Backend
 
-Pré-requisito: Python 3.11+.
+Pré-requisito: Python 3.11+ (FastAPI, PuLP e scikit-learn).
 
 ```bash
 cd backend
@@ -39,8 +39,11 @@ curl http://127.0.0.1:8002/health
 Endpoints principais:
 
 - `GET  /health` — liveness check.
-- `GET  /previsoes` — previsões de crescimento por região (dados de
-  `backend/data/previsoes_v3_12_semanas.csv`).
+- `GET  /previsoes` — previsões de crescimento por região. Os dados vêm
+  do CSV apontado por `CAMINHO_CSV_PADRAO` (`backend/previsoes.py`);
+  hoje `backend/data/previsoes_v3_52_semanas.csv`. O horizonte (nº de
+  semanas) é lido do arquivo — não está cravado em lugar nenhum do
+  código nem das telas, então trocar o CSV basta.
 - `POST /previsoes/gerar-alocacao` — deriva os locais que atingiram o
   limiar de poda a partir das previsões e roda o solver.
 - `POST /gerar-alocacao` — roda o solver direto sobre um lote de locais
@@ -51,6 +54,14 @@ Endpoints principais:
 - `GET  /alocacao/atual` — última alocação publicada, com o status de
   conclusão de cada local (404 se nada foi publicado ainda).
 - `POST /alocacao/locais/concluir` — marca/desmarca um local como concluído.
+- `GET  /parametros` — constantes de calibração do backend (`limiarPodaCm`,
+  `capacidadeDiaria`), para as telas não duplicarem esses números.
+- `GET  /clusterizacao` — agrupa as regiões por rota, altura atual e
+  tendência de crescimento (k-means, `backend/clusterizacao.py`). Aceita
+  `?k=N` para forçar o número de grupos. É uma **camada de análise**,
+  separada do solver: não alimenta a Otimização. ⚠️ **Os dados de rota são
+  simulados** (`ROTAS_SIMULADAS`) — o CSV de previsão não tem nenhum campo
+  geográfico. Altura e tendência vêm dos dados reais.
 
 `/alocacao/*` persistem em `backend/data/podadores.db` (SQLite) — é o único
 estado com persistência no backend; o resto é sem estado.

@@ -193,7 +193,8 @@ próxima rodada, caso surja a necessidade.
 
 A versão acima resolve um mês por vez — o que fica de fora vira "fora do
 mês". A Otimização do frontend não pede mais um mês: gera um cronograma
-único cobrindo todo o horizonte de 12 semanas de previsão de uma vez
+único cobrindo todo o horizonte de previsão de uma vez — quantas semanas
+esse horizonte tem vem do CSV carregado, não do modelo
 (`rodar_modelo_horoprognosis_com_prazos` em `horoprognosis.py`, usada por
 `POST /previsoes/gerar-alocacao`). Duas mudanças em cima do modelo base:
 
@@ -202,6 +203,13 @@ mês". A Otimização do frontend não pede mais um mês: gera um cronograma
 `D` passa a ser os dias úteis entre o prazo mais próximo e o mais
 distante entre os locais do lote (`gerar_dias_uteis_intervalo`) — o
 suficiente para caber qualquer alocação válida, sem sobra desnecessária.
+
+Consequência prática: **o tamanho do problema não acompanha o tamanho do
+horizonte de previsão**. `D` é o intervalo entre os prazos, não o
+horizonte inteiro — ao migrar de 12 para 52 semanas de previsão, `|D|`
+continuou em 6 dias úteis, porque todas as regiões cruzam o limiar nas
+primeiras semanas. Quem faz o modelo crescer é a dispersão dos prazos
+(e `|A|`), não o comprimento do CSV.
 
 ### R3-completo — Cada local só pode ser podado até o seu próprio prazo
 
@@ -265,6 +273,24 @@ Variáveis binárias = |A| × |C| × |D|
 
 Exemplo ilustrativo: 50 locais × 4 equipes × 21 dias úteis = **4.200**
 variáveis binárias.
+
+---
+
+## Fora do modelo: clusterização por perfil de crescimento
+
+`backend/clusterizacao.py` (endpoint `GET /clusterizacao`) agrupa as
+regiões por rota, altura mais recente e tendência de crescimento, com
+k-means sobre features padronizadas. **Não faz parte da formulação
+acima** e não influencia o solver — é leitura de conjunto, que no futuro
+pode virar parâmetro da Otimização. Registrado aqui só para deixar claro
+que `A`, `H`, R1–R4 e a FO continuam exatamente como especificados.
+
+Um detalhe do cálculo da tendência vale nota: a série de previsão é
+serrilhada, porque `houve_poda` marca as semanas em que a previsão já
+embute um corte e a altura volta à linha de base. A inclinação é medida
+**dentro do ciclo de crescimento corrente** (desde a última poda) — sobre
+a série inteira, uma região recém-podada apareceria com crescimento
+negativo.
 
 ---
 

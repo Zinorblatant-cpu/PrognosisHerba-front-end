@@ -21,14 +21,14 @@ const FUNCOES = [
     icon: TrendingUp,
     numero: "01",
     title: "Previsões IA",
-    description: "Crescimento previsto para as próximas 12 semanas, por região, com alerta de limiar de poda.",
+    description: "Crescimento previsto por região ao longo de todo o horizonte de previsão, com alerta de limiar de poda.",
   },
   {
     to: "/otimizacao",
     icon: SlidersHorizontal,
     numero: "02",
     title: "Otimização",
-    description: "Gera o cronograma completo de poda, cobrindo todo o horizonte de 12 semanas, via solver PuLP.",
+    description: "Gera o cronograma completo de poda, cobrindo todo o horizonte de previsão, via solver PuLP.",
   },
   {
     to: "/cronograma",
