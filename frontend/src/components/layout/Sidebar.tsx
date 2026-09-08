@@ -7,6 +7,7 @@ import {
   Sprout,
   MonitorCheck,
   Network,
+  X,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -18,11 +19,20 @@ const NAV_ITEMS = [
   { to: "/monitoramento", label: "Monitoramento", icon: MonitorCheck },
 ];
 
-export function Sidebar() {
+/**
+ * Abaixo de `lg` a sidebar vira uma gaveta off-canvas controlada por `aberta`
+ * (o AppShell desenha o backdrop e o botão de menu); de `lg` para cima ela
+ * volta a ser a coluna fixa de sempre.
+ */
+export function Sidebar({ aberta = false, aoNavegar }: { aberta?: boolean; aoNavegar?: () => void }) {
   return (
-    <aside className="flex h-screen w-52 shrink-0 flex-col border-r border-border bg-bg px-3 py-6 lg:w-64 lg:px-4">
+    <aside
+      className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col overflow-y-auto border-r border-border bg-bg px-4 py-6 transition-transform duration-200 ease-out lg:static lg:z-auto lg:h-screen lg:translate-x-0 lg:overflow-visible lg:transition-none ${
+        aberta ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       <div className="mb-8 flex items-center gap-2.5 px-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(166,255,0,0.2)]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(166,255,0,0.2)]">
           <Sprout size={19} />
         </div>
         <div className="leading-tight">
@@ -31,6 +41,14 @@ export function Sidebar() {
           </span>
           <span className="block text-[11px] font-medium uppercase tracking-wider text-fg-faint">Manejo de poda</span>
         </div>
+        <button
+          type="button"
+          onClick={aoNavegar}
+          aria-label="Fechar menu"
+          className="ml-auto -mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-fg-muted transition hover:bg-bg-card hover:text-fg lg:hidden"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       <nav className="flex flex-1 flex-col gap-1">
@@ -39,6 +57,7 @@ export function Sidebar() {
             key={to}
             to={to}
             end={end}
+            onClick={aoNavegar}
             className={({ isActive }) =>
               `group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                 isActive
@@ -62,7 +81,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="rounded-lg border border-border bg-bg-card px-3 py-2.5 text-[11px] text-fg-faint">
+      <div className="mt-6 rounded-lg border border-border bg-bg-card px-3 py-2.5 text-[11px] text-fg-faint">
         Previsões · Otimização · Cronograma
       </div>
     </aside>

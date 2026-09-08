@@ -42,6 +42,7 @@ from horoprognosis import (
 )
 from clusterizacao import clusterizar_do_csv
 from persistencia import marcar_conclusao, obter_alocacao_atual, publicar_alocacao
+from fonte_previsoes import garantir_previsoes_atuais
 from previsoes import LIMIAR_PODA_CM, carregar_previsoes, derivar_locais_de_poda
 
 app = FastAPI(title="Horoprognosis API", version="1.0")
@@ -222,6 +223,7 @@ def parametros_endpoint():
 def clusterizacao_endpoint(k: int | None = Query(default=None, ge=1)):
     """Agrupa as regiões por perfil de crescimento. `k` opcional força o
     número de grupos; sem ele o número sai do tamanho do lote."""
+    garantir_previsoes_atuais()
     return clusterizar_do_csv(k=k)
 
 
@@ -279,11 +281,13 @@ def gerar_alocacao_endpoint(req: AlocacaoRequest):
 
 @app.get("/previsoes", response_model=list[PrevisaoRegiao])
 def previsoes_endpoint():
+    garantir_previsoes_atuais()
     return carregar_previsoes()
 
 
 @app.post("/previsoes/gerar-alocacao", response_model=GerarAlocacaoDePrevisoesResponse)
 def gerar_alocacao_de_previsoes_endpoint(req: GerarAlocacaoDePrevisoesRequest):
+    garantir_previsoes_atuais()
     previsoes = carregar_previsoes()
     derivado = derivar_locais_de_poda(previsoes, limiar=req.limiarPodaCm)
 

@@ -74,16 +74,16 @@ export function Agrupamento() {
                   subtitle={`${cluster.regioes.length} ${cluster.regioes.length === 1 ? "região" : "regiões"}`}
                   action={<Tag nivel={NIVEL_POR_ROTULO[cluster.rotulo] ?? "Informativo"} label={cluster.rotulo} />}
                 />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div className="rounded-lg border border-border bg-bg-secondary px-3 py-2">
                     <p className="text-xs text-fg-muted">Altura média</p>
-                    <p className="font-mono-tabular mt-0.5 text-lg text-fg">
+                    <p className="font-mono-tabular mt-0.5 text-base text-fg sm:text-lg">
                       {cluster.alturaMediaCm.toFixed(2)} cm
                     </p>
                   </div>
                   <div className="rounded-lg border border-border bg-bg-secondary px-3 py-2">
                     <p className="text-xs text-fg-muted">Tendência média</p>
-                    <p className="font-mono-tabular mt-0.5 text-lg text-primary">
+                    <p className="font-mono-tabular mt-0.5 text-base text-primary sm:text-lg">
                       {formatarTendencia(cluster.tendenciaMediaCmPorSemana)}
                     </p>
                   </div>

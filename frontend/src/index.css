@@ -27,6 +27,12 @@ body,
   height: 100%;
 }
 
+html {
+  /* Impede o iOS de reescalar a fonte ao girar o aparelho para paisagem. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background-color: var(--color-bg);
   background-image: radial-gradient(circle at 12% -10%, rgba(166, 255, 0, 0.05), transparent 45%);

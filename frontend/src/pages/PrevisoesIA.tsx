@@ -113,7 +113,8 @@ export function PrevisoesIA() {
                   title={`Altura prevista — ${regiao.idRegiao}`}
                   subtitle={`Inclinação do terreno: ${regiao.inclinacaoGraus}° · Área de risco: ${regiao.areaDeRisco}`}
                 />
-                <ResponsiveContainer width="100%" height={280}>
+                <div className="h-[240px] w-full sm:h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={dadosGrafico} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                     <defs>
                       <linearGradient id="alturaFill" x1="0" y1="0" x2="0" y2="1">
@@ -174,6 +175,7 @@ export function PrevisoesIA() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
+                </div>
               </Card>
 
               <Card>
@@ -181,7 +183,7 @@ export function PrevisoesIA() {
                   title="Semana a semana"
                   subtitle={`${regiao.semanas.length} semanas · destaque nas que atingem o limiar`}
                 />
-                <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+                <div className="max-h-[280px] space-y-2 overflow-y-auto pr-1 sm:max-h-[320px]">
                   {regiao.semanas.map((s) => (
                     <div
                       key={s.data}

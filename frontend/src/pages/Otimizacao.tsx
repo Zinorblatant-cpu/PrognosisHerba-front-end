@@ -67,7 +67,7 @@ export function Otimizacao() {
                 min={1}
                 value={quantidadeEquipes}
                 onChange={(e) => setQuantidadeEquipes(Number(e.target.value))}
-                className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-fg transition-colors hover:border-border-strong focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-base text-fg transition-colors sm:text-sm hover:border-border-strong focus:border-primary focus:outline-none"
               />
             </div>
 
@@ -82,7 +82,7 @@ export function Otimizacao() {
                 step={0.5}
                 value={capacidadeDiaria}
                 onChange={(e) => setCapacidadeDiaria(Number(e.target.value))}
-                className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-fg transition-colors hover:border-border-strong focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-base text-fg transition-colors sm:text-sm hover:border-border-strong focus:border-primary focus:outline-none"
               />
             </div>
 

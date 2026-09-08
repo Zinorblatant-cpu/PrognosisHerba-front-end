@@ -64,19 +64,19 @@ export function Home() {
   }, [resultado]);
 
   return (
-    <div className="flex min-h-[calc(100vh-6rem)] flex-col items-center justify-center gap-12 py-10 text-center">
+    <div className="flex flex-col items-center justify-center gap-8 py-4 text-center sm:gap-10 sm:py-8 lg:min-h-[calc(100vh-6rem)] lg:gap-12 lg:py-10">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">PrognosisHerba</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-fg">O que você quer fazer?</h1>
+        <h1 className="mt-3 text-2xl font-bold tracking-tight text-fg sm:text-3xl lg:text-4xl">O que você quer fazer?</h1>
         <p className="mt-2.5 text-sm text-fg-muted">Escolha uma das etapas do fluxo de manejo de poda.</p>
       </div>
 
-      <div className="grid w-full max-w-5xl grid-cols-1 gap-5 text-left sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid w-full max-w-5xl grid-cols-1 gap-4 text-left sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
         {FUNCOES.map(({ to, icon: Icon, numero, title, description }) => (
           <Link
             key={to}
             to={to}
-            className="group flex flex-col rounded-2xl border border-border bg-bg-card p-6 transition hover:border-primary/40 hover:bg-bg-card-raised hover:shadow-[0_0_0_1px_rgba(166,255,0,0.15),0_16px_32px_-16px_rgba(0,0,0,0.7)]"
+            className="group flex flex-col rounded-2xl border border-border bg-bg-card p-5 transition sm:p-6 hover:border-primary/40 hover:bg-bg-card-raised hover:shadow-[0_0_0_1px_rgba(166,255,0,0.15),0_16px_32px_-16px_rgba(0,0,0,0.7)]"
           >
             <div className="flex items-start justify-between">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -115,7 +115,7 @@ export function Home() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
                 <KpiCard label="Locais alocados" value={String(status.totalLocais)} icon={<MapPin size={20} />} />
                 <KpiCard label="Equipes em campo" value={String(status.totalEquipes)} icon={<Users size={20} />} />
                 <KpiCard label="Dias úteis" value={String(status.totalDias)} icon={<CalendarDays size={20} />} />
