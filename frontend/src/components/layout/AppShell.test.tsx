@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AppShell, PageHeader } from "./AppShell";
 
 describe("AppShell", () => {
@@ -14,6 +15,45 @@ describe("AppShell", () => {
     );
     expect(screen.getByText("conteúdo da página")).toBeInTheDocument();
     expect(screen.getByText("Início")).toBeInTheDocument();
+  });
+
+  it("abre o menu mobile ao clicar no botão e fecha ao clicar no overlay", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AppShell>
+          <p>conteúdo da página</p>
+        </AppShell>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("sidebar-overlay")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Abrir menu" }));
+    expect(screen.getByTestId("sidebar-overlay")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("sidebar-overlay"));
+    expect(screen.queryByTestId("sidebar-overlay")).not.toBeInTheDocument();
+  });
+
+  it("fecha o menu mobile ao navegar para outra rota", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <AppShell>
+          <Routes>
+            <Route path="/" element={<p>home</p>} />
+            <Route path="/otimizacao" element={<p>otimizacao</p>} />
+          </Routes>
+        </AppShell>
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Abrir menu" }));
+    expect(screen.getByTestId("sidebar-overlay")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: /Otimização/ }));
+    expect(screen.queryByTestId("sidebar-overlay")).not.toBeInTheDocument();
   });
 });
 

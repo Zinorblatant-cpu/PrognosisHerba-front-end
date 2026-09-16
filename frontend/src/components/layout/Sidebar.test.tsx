@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 
@@ -26,5 +27,52 @@ describe("Sidebar", () => {
     );
     expect(screen.getByRole("link", { name: /Otimização/ })).toHaveClass("text-primary");
     expect(screen.getByRole("link", { name: /Início/ })).not.toHaveClass("text-primary");
+  });
+
+  it("não mostra o overlay quando fechado", () => {
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByTestId("sidebar-overlay")).not.toBeInTheDocument();
+  });
+
+  it("permite clicar em um item de navegação sem passar onClose", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole("link", { name: /Cronograma/ }));
+    expect(screen.getByRole("link", { name: /Cronograma/ })).toBeInTheDocument();
+  });
+
+  it("mostra o overlay quando aberto e chama onClose ao clicar nele", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <MemoryRouter>
+        <Sidebar open onClose={onClose} />
+      </MemoryRouter>,
+    );
+
+    const overlay = screen.getByTestId("sidebar-overlay");
+    await user.click(overlay);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("chama onClose ao clicar em um item de navegação", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <MemoryRouter>
+        <Sidebar open onClose={onClose} />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("link", { name: /Cronograma/ }));
+    expect(onClose).toHaveBeenCalled();
   });
 });

@@ -51,7 +51,7 @@ export function Otimizacao() {
         subtitle="Gera o cronograma completo de poda a partir das previsões da IA, cobrindo todo o horizonte de 12 semanas (modelo horoprognosis / PuLP)"
       />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader title="Parâmetros" subtitle="Ajuste e rode o solver" />
 
@@ -97,7 +97,7 @@ export function Otimizacao() {
           </div>
         </Card>
 
-        <Card className="col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader
             title="Locais derivados da previsão"
             subtitle={
@@ -118,30 +118,32 @@ export function Otimizacao() {
                 </div>
               )}
 
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="text-xs text-fg-muted">
-                    <th className="pb-2 font-normal">Região</th>
-                    <th className="pb-2 font-normal">Prioridade</th>
-                    <th className="pb-2 font-normal">Dificuldade</th>
-                    <th className="pb-2 font-normal">Data-alvo</th>
-                    <th className="pb-2 font-normal">Altura prevista</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resultado.locaisDerivados.map((loc) => (
-                    <tr key={loc.id} className="border-t border-border">
-                      <td className="py-2 text-fg">{loc.id}</td>
-                      <td className="py-2">
-                        <Tag nivel={loc.prioridade} />
-                      </td>
-                      <td className="py-2 text-fg-muted capitalize">{loc.dificuldade}</td>
-                      <td className="py-2 text-fg-muted">{loc.dataAlvo}</td>
-                      <td className="py-2 text-fg-muted">{loc.alturaPrevistaCm.toFixed(2)} cm</td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] text-left text-sm">
+                  <thead>
+                    <tr className="text-xs text-fg-muted">
+                      <th className="pb-2 font-normal">Região</th>
+                      <th className="pb-2 font-normal">Prioridade</th>
+                      <th className="pb-2 font-normal">Dificuldade</th>
+                      <th className="pb-2 font-normal">Data-alvo</th>
+                      <th className="pb-2 font-normal">Altura prevista</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {resultado.locaisDerivados.map((loc) => (
+                      <tr key={loc.id} className="border-t border-border">
+                        <td className="py-2 text-fg">{loc.id}</td>
+                        <td className="py-2">
+                          <Tag nivel={loc.prioridade} />
+                        </td>
+                        <td className="py-2 text-fg-muted capitalize">{loc.dificuldade}</td>
+                        <td className="py-2 text-fg-muted">{loc.dataAlvo}</td>
+                        <td className="py-2 text-fg-muted">{loc.alturaPrevistaCm.toFixed(2)} cm</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {resultado.semAlertaNoHorizonte.length > 0 && (
                 <p className="mt-4 text-xs text-fg-muted">
