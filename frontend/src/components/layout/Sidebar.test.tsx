@@ -16,6 +16,7 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: /Previsões IA/ })).toHaveAttribute("href", "/previsoes");
     expect(screen.getByRole("link", { name: /Otimização/ })).toHaveAttribute("href", "/otimizacao");
     expect(screen.getByRole("link", { name: /Cronograma/ })).toHaveAttribute("href", "/cronograma");
+    expect(screen.getByRole("link", { name: /Agrupamento/ })).toHaveAttribute("href", "/agrupamento");
     expect(screen.getByRole("link", { name: /Monitoramento/ })).toHaveAttribute("href", "/monitoramento");
   });
 
@@ -29,16 +30,16 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: /Início/ })).not.toHaveClass("text-primary");
   });
 
-  it("não mostra o overlay quando fechado", () => {
+  it("começa fechada (fora da tela) quando aberta não é informado", () => {
     render(
       <MemoryRouter>
         <Sidebar />
       </MemoryRouter>,
     );
-    expect(screen.queryByTestId("sidebar-overlay")).not.toBeInTheDocument();
+    expect(screen.getByText("Herba").closest("aside")).toHaveClass("-translate-x-full");
   });
 
-  it("permite clicar em um item de navegação sem passar onClose", async () => {
+  it("permite clicar em um item de navegação sem passar aoNavegar", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -49,30 +50,29 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: /Cronograma/ })).toBeInTheDocument();
   });
 
-  it("mostra o overlay quando aberto e chama onClose ao clicar nele", async () => {
+  it("chama aoNavegar ao clicar no botão de fechar", async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
+    const aoNavegar = vi.fn();
     render(
       <MemoryRouter>
-        <Sidebar open onClose={onClose} />
+        <Sidebar aberta aoNavegar={aoNavegar} />
       </MemoryRouter>,
     );
 
-    const overlay = screen.getByTestId("sidebar-overlay");
-    await user.click(overlay);
-    expect(onClose).toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Fechar menu" }));
+    expect(aoNavegar).toHaveBeenCalled();
   });
 
-  it("chama onClose ao clicar em um item de navegação", async () => {
+  it("chama aoNavegar ao clicar em um item de navegação", async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
+    const aoNavegar = vi.fn();
     render(
       <MemoryRouter>
-        <Sidebar open onClose={onClose} />
+        <Sidebar aberta aoNavegar={aoNavegar} />
       </MemoryRouter>,
     );
 
     await user.click(screen.getByRole("link", { name: /Cronograma/ }));
-    expect(onClose).toHaveBeenCalled();
+    expect(aoNavegar).toHaveBeenCalled();
   });
 });

@@ -1,3 +1,33 @@
+export interface RegiaoClusterizada {
+  idRegiao: string;
+  rota: string;
+  rotaSimulada: boolean;
+  alturaAtualCm: number;
+  tendenciaCmPorSemana: number;
+  semanasDesdeUltimaPoda: number;
+  clusterId: number;
+}
+
+export interface Cluster {
+  clusterId: number;
+  rotulo: string;
+  regioes: string[];
+  rotas: string[];
+  alturaMediaCm: number;
+  tendenciaMediaCmPorSemana: number;
+}
+
+export interface Clusterizacao {
+  avisoRota: string;
+  clusters: Cluster[];
+  regioes: RegiaoClusterizada[];
+}
+
+export interface Parametros {
+  limiarPodaCm: number;
+  capacidadeDiaria: number;
+}
+
 export interface SemanaPrevisao {
   data: string;
   alturaPrevistaCm: number;

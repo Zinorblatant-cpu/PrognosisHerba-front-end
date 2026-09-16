@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 pulp
+scikit-learn
 
 # dev / testes
 pytest

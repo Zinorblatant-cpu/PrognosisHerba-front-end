@@ -15,10 +15,10 @@ export function KpiCard({
   icon?: ReactNode;
 }) {
   return (
-    <Card className="flex items-start justify-between">
-      <div>
+    <Card className="flex items-start justify-between transition-colors hover:border-border-strong">
+      <div className="min-w-0">
         <p className="text-sm text-fg-muted">{label}</p>
-        <p className="mt-2 text-3xl font-bold text-fg">{value}</p>
+        <p className="font-mono-tabular mt-2 text-2xl font-bold text-fg sm:text-3xl">{value}</p>
         {delta && (
           <p className="mt-2 text-xs text-primary">
             <span className="mr-1">▲</span>
@@ -26,7 +26,7 @@ export function KpiCard({
           </p>
         )}
       </div>
-      {icon && <div className="text-primary">{icon}</div>}
+      {icon && <div className="shrink-0 text-primary">{icon}</div>}
     </Card>
   );
 }

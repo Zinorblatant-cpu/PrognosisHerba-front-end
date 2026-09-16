@@ -1,5 +1,7 @@
 import type {
   AlocacaoPublicada,
+  Clusterizacao,
+  Parametros,
   GerarAlocacaoDePrevisoesRequest,
   GerarAlocacaoDePrevisoesResponse,
   PrevisaoRegiao,
@@ -41,6 +43,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return res.json() as Promise<T>;
+}
+
+/** Agrupamento das regiões por rota, altura atual e tendência de crescimento. */
+export function getClusterizacao(): Promise<Clusterizacao> {
+  return request<Clusterizacao>("/clusterizacao");
+}
+
+/** Constantes de calibração do backend (limiar de poda, capacidade diária). */
+export function getParametros(): Promise<Parametros> {
+  return request<Parametros>("/parametros");
 }
 
 export function getPrevisoes(): Promise<PrevisaoRegiao[]> {

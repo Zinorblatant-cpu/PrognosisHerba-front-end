@@ -3,6 +3,8 @@ import {
   ApiError,
   gerarAlocacaoDePrevisoes,
   getAlocacaoAtual,
+  getClusterizacao,
+  getParametros,
   getPrevisoes,
   publicarAlocacao,
   resolveBaseUrl,
@@ -35,6 +37,28 @@ describe("api", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("getClusterizacao faz GET em /clusterizacao e devolve o corpo", async () => {
+    const dados = { avisoRota: "simulado", clusters: [], regioes: [] };
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(jsonResponse(dados));
+
+    expect(await getClusterizacao()).toEqual(dados);
+    expect(fetch).toHaveBeenCalledWith(
+      `${BASE_URL}/clusterizacao`,
+      expect.objectContaining({ headers: { "Content-Type": "application/json" } }),
+    );
+  });
+
+  it("getParametros faz GET em /parametros e devolve o corpo", async () => {
+    const dados = { limiarPodaCm: 9, capacidadeDiaria: 3 };
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(jsonResponse(dados));
+
+    expect(await getParametros()).toEqual(dados);
+    expect(fetch).toHaveBeenCalledWith(
+      `${BASE_URL}/parametros`,
+      expect.objectContaining({ headers: { "Content-Type": "application/json" } }),
+    );
   });
 
   it("getPrevisoes faz GET em /previsoes e devolve o corpo", async () => {
