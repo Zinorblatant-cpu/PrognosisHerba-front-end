@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Agenda } from "./Agenda";
 import type { AlocacaoPublicada } from "../lib/types";
@@ -32,6 +32,14 @@ const DADOS: AlocacaoPublicada = {
 };
 
 describe("Agenda", () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("mostra o nome da equipe e ordena os dias", () => {
     render(
       <Agenda
@@ -146,5 +154,59 @@ describe("Agenda", () => {
 
     await user.click(screen.getByRole("button", { name: "Trocar equipe" }));
     expect(onTrocarEquipe).toHaveBeenCalled();
+  });
+
+  it("destaca o dia de hoje e rola até ele", () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00"));
+    render(
+      <Agenda
+        dados={DADOS}
+        equipeId="equipe_1"
+        pendente={null}
+        onTrocarEquipe={vi.fn()}
+        onAlternarConclusao={vi.fn()}
+      />,
+    );
+
+    const secaoHoje = screen.getByText("15/09 · ter").closest("section")!;
+    expect(within(secaoHoje).getByText("Hoje")).toBeInTheDocument();
+    expect(screen.getByText("14/09 · seg").closest("section")!.textContent).not.toContain("Hoje");
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+  });
+
+  it("não rola a tela quando nenhum dia listado é hoje", () => {
+    vi.setSystemTime(new Date("2026-01-01T12:00:00"));
+    render(
+      <Agenda
+        dados={DADOS}
+        equipeId="equipe_1"
+        pendente={null}
+        onTrocarEquipe={vi.fn()}
+        onAlternarConclusao={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Hoje")).not.toBeInTheDocument();
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("mostra mensagem de conclusão quando todos os locais da equipe estão concluídos", () => {
+    const dadosCompletos: AlocacaoPublicada = {
+      ...DADOS,
+      alocacoes: DADOS.alocacoes.map((a) =>
+        a.equipeId === "equipe_1" ? { ...a, locais: a.locais.map((l) => ({ ...l, concluido: true })) } : a,
+      ),
+    };
+    render(
+      <Agenda
+        dados={dadosCompletos}
+        equipeId="equipe_1"
+        pendente={null}
+        onTrocarEquipe={vi.fn()}
+        onAlternarConclusao={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Tudo concluído por aqui! 🌿")).toBeInTheDocument();
   });
 });

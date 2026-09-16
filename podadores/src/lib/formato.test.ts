@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { diaDaSemana, formatarDiaMes, formatarEquipe } from "./formato";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { diaDaSemana, ehHoje, formatarDiaMes, formatarEquipe } from "./formato";
 
 describe("formatarDiaMes", () => {
   it("converte data ISO para dd/mm", () => {
@@ -26,5 +26,21 @@ describe("formatarEquipe", () => {
 
   it("funciona com ids sem underscore", () => {
     expect(formatarEquipe("time1")).toBe("Time1");
+  });
+});
+
+describe("ehHoje", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("retorna true quando o iso é a data local de hoje", () => {
+    vi.setSystemTime(new Date("2026-09-14T12:00:00"));
+    expect(ehHoje("2026-09-14")).toBe(true);
+  });
+
+  it("retorna false quando o iso é outra data", () => {
+    vi.setSystemTime(new Date("2026-09-14T12:00:00"));
+    expect(ehHoje("2026-09-15")).toBe(false);
   });
 });

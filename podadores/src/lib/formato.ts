@@ -19,3 +19,12 @@ export function formatarEquipe(equipeId: string) {
   const legivel = equipeId.replace(/_/g, " ");
   return legivel.charAt(0).toUpperCase() + legivel.slice(1);
 }
+
+/** true quando o "iso" corresponde à data local de hoje. */
+export function ehHoje(iso: string): boolean {
+  const hoje = new Date();
+  const isoHoje = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(
+    hoje.getDate(),
+  ).padStart(2, "0")}`;
+  return iso === isoHoje;
+}
