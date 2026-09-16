@@ -5,6 +5,8 @@ import { PageHeader } from "../components/layout/AppShell";
 import { Card, CardHeader } from "../components/ui/Card";
 import { Tag } from "../components/ui/Tag";
 import { Button } from "../components/ui/Button";
+import { Calendario } from "../components/ui/Calendario";
+import { construirCalendario } from "../lib/calendario";
 import { useAlocacao } from "../state/AlocacaoContext";
 import type { LocalAlocado } from "../lib/types";
 
@@ -72,6 +74,15 @@ export function Cronograma() {
     [resultado],
   );
 
+  const meses = useMemo(() => {
+    if (!resultado) return [];
+    const totalPorDia = new Map<string, number>();
+    for (const a of resultado.alocacoes) {
+      totalPorDia.set(a.dia, (totalPorDia.get(a.dia) ?? 0) + a.locais.length);
+    }
+    return construirCalendario(resultado.periodo.inicio, resultado.periodo.fim, totalPorDia);
+  }, [resultado]);
+
   if (!resultado) {
     return (
       <div>
@@ -100,6 +111,11 @@ export function Cronograma() {
         title="Cronograma"
         subtitle={`Período: ${resultado.periodo.inicio} a ${resultado.periodo.fim}`}
       />
+
+      <Card className="mb-4">
+        <CardHeader title="Calendário" subtitle="Dias em vermelho têm poda agendada" />
+        <Calendario meses={meses} />
+      </Card>
 
       <Card className="mb-4">
         <CardHeader title="Grade de alocação" subtitle={`Equipe × dia útil — ${resumo}`} />
