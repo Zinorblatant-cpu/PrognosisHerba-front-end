@@ -18,7 +18,8 @@ services:
 
   # Painel principal (Previsões, Otimização, Cronograma, Monitoramento,
   # Análise de grama). Static Site — free, sem hibernação.
-  - type: static
+  - type: web
+    runtime: static
     name: prognosisherba-frontend
     rootDir: frontend
     buildCommand: npm install && npm run build
@@ -33,7 +34,8 @@ services:
         destination: /index.html
 
   # Site dos podadores (consome /alocacao/* do mesmo backend).
-  - type: static
+  - type: web
+    runtime: static
     name: prognosisherba-podadores
     rootDir: podadores
     buildCommand: npm install && npm run build
