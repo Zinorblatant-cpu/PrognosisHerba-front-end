@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from analise_grama import (
+    altura_media_por_coluna_px,
     analisar_imagem,
     analisar_pick,
     apply_mask,
@@ -36,7 +37,9 @@ FIXTURE_P1 = (310, 50)
 FIXTURE_P2 = (310, 150)
 FIXTURE_DISTANCIA_CM = 10.0
 FIXTURE_AREA_CM2_ESPERADA = 371.01
-FIXTURE_ALTURA_MEDIA_CM_ESPERADA = 14.8404
+# alturaMediaCm = extensão vertical média por coluna (não área ÷ largura) —
+# pra um retângulo sólido, toda coluna tem extensão = altura exata (150px).
+FIXTURE_ALTURA_MEDIA_CM_ESPERADA = 15.0
 
 
 def _imagem_png(altura=200, largura=300, fracao_verde_de_baixo=0.0):
@@ -157,6 +160,30 @@ class TestContarPontosPick:
         mask = np.zeros((10, 10), dtype=np.uint8)
         mask[2:6, 2:7] = 255  # 4 linhas (altura) x 5 colunas (largura)
         assert contar_pontos_pick(mask) == (6, 14)
+
+
+class TestAlturaMediaPorColunaPx:
+    def test_none_sem_verde(self):
+        mask = np.zeros((10, 10), dtype=np.uint8)
+        assert altura_media_por_coluna_px(mask) is None
+
+    def test_retangulo_solido_extensao_e_a_propria_altura(self):
+        mask = np.zeros((300, 400), dtype=np.uint8)
+        mask[150:300, 0:250] = 255
+        assert altura_media_por_coluna_px(mask) == pytest.approx(150.0)
+
+    def test_colunas_vazias_nao_contam_como_zero(self):
+        # Duas touceiras de 6px de altura com um vão TOTALMENTE vazio entre
+        # elas (sem nenhum pixel verde) — as colunas vazias devem ser
+        # ignoradas na média, não contadas como extensão 0. Isso é o que
+        # evita diluir o resultado quando a caixa delimitadora é bem maior
+        # que onde a grama realmente está (diferente de área ÷ largura da
+        # caixa inteira, que dividiria pela largura toda incluindo o vão).
+        mask = np.zeros((10, 20), dtype=np.uint8)
+        mask[2:8, 0:5] = 255  # touceira 1: extensão 6px
+        mask[2:8, 15:20] = 255  # touceira 2: extensão 6px
+        # colunas 5-14 ficam vazias (vão sem grama nenhuma)
+        assert altura_media_por_coluna_px(mask) == pytest.approx(6.0)
 
 
 class TestAnalisarPick:

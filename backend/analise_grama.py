@@ -180,31 +180,56 @@ def maior_componente(mask: np.ndarray) -> np.ndarray | None:
     return np.where(labels == maior_label, 255, 0).astype(np.uint8)
 
 
+def altura_media_por_coluna_px(componente: np.ndarray) -> float | None:
+    """Extensão vertical média (topo-base) das colunas que têm verde no
+    componente, em pixels. None se não há nenhuma coluna com verde.
+
+    Não é "área ÷ largura da caixa inteira": numa foto com vários vasos/
+    touceiras separadas cujas folhas se tocam e viram um componente só (a
+    caixa delimitadora cobre quase a largura inteira da foto, incluindo o
+    espaço vazio entre as touceiras), dividir pela largura toda dilui o
+    resultado. Medir a extensão coluna a coluna e tirar a média só considera
+    onde realmente há verde, então não sofre com esse efeito.
+    """
+    colunas_com_verde = np.where(np.any(componente == 255, axis=0))[0]
+    if colunas_com_verde.size == 0:
+        return None
+    extensoes = []
+    for col in colunas_com_verde:
+        ys = np.where(componente[:, col] == 255)[0]
+        extensoes.append(int(ys.max() - ys.min() + 1))
+    return float(np.mean(extensoes))
+
+
 def analisar_pick(mask: np.ndarray, px_por_cm: float) -> dict | None:
-    """Teorema de Pick sobre o maior componente conexo da máscara, convertido
-    pra cm² via `px_por_cm`, e transformado numa altura MÉDIA (área da mancha
-    ÷ largura do seu bounding box — como se fosse um retângulo equivalente).
+    """Teorema de Pick sobre o maior componente conexo da máscara: `areaCm2`
+    é a área exata calculada por Pick (I + B/2 - 1, convertida via
+    `px_por_cm`), e `alturaMediaCm` é a extensão vertical média por coluna
+    (ver `altura_media_por_coluna_px`) — não área ÷ largura, ver docstring
+    daquela função.
 
     Restringir ao maior componente evita que um respingo verde isolado
-    (ruído, anti-aliasing) infle a largura e distorça a altura média. None se
-    não há nenhum componente verde.
+    (ruído, anti-aliasing) distorça a análise. None se não há nenhum
+    componente verde.
     """
-    num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(mask, connectivity=4)
-    if num_labels <= 1:  # só o fundo (label 0)
+    componente = maior_componente(mask)
+    if componente is None:
         return None
 
-    maior_label = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-    largura_px = int(stats[maior_label, cv2.CC_STAT_WIDTH])
+    _x, _y, largura_px, _altura_px = cv2.boundingRect(componente)
     if largura_px <= 0:
         return None
 
-    mascara_componente = np.where(labels == maior_label, 255, 0).astype(np.uint8)
-    pontos_interiores, pontos_borda = contar_pontos_pick(mascara_componente)
+    altura_media_px = altura_media_por_coluna_px(componente)
+    if altura_media_px is None:
+        return None
+
+    pontos_interiores, pontos_borda = contar_pontos_pick(componente)
     area_px2 = max(pontos_interiores + pontos_borda / 2 - 1, 0.0)
 
     area_cm2 = area_px2 / (px_por_cm ** 2)
     largura_cm = largura_px / px_por_cm
-    altura_media_cm = area_cm2 / largura_cm
+    altura_media_cm = altura_media_px / px_por_cm
 
     return {
         "pxPorCm": px_por_cm,
@@ -265,8 +290,8 @@ def _desenhar_pontos_pick(annotated: np.ndarray, mask: np.ndarray, analise_pick:
 
     cv2.rectangle(annotated, (x, y), (x + largura, y + altura), COR_PICK_CAIXA_BGR, 1)
     legenda = (
-        f"Pick: {analise_pick['alturaMediaCm']:.1f}cm "
-        f"({analise_pick['areaCm2']:.0f}cm2 / {analise_pick['larguraCm']:.1f}cm)"
+        f"Pick: {analise_pick['alturaMediaCm']:.1f}cm media/coluna "
+        f"(area {analise_pick['areaCm2']:.0f}cm2)"
     )
     cv2.putText(
         annotated, legenda, (x, max(y - 8, 14)),
