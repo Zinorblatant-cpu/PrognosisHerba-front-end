@@ -1,6 +1,7 @@
 import type {
   AlocacaoPublicada,
   AnaliseGramaResponse,
+  CalibracaoFita,
   Clusterizacao,
   Parametros,
   GerarAlocacaoDePrevisoesRequest,
@@ -90,10 +91,24 @@ export async function getAlocacaoAtual(): Promise<AlocacaoPublicada | null> {
  * Envia uma foto avulsa de grama para análise por segmentação de cor.
  * Upload multipart — não passa pelo helper `request` porque este força
  * `Content-Type: application/json`, incompatível com FormData.
+ *
+ * `calibracao` é opcional: quando informada (2 pontos clicados na fita
+ * métrica + a distância real entre eles), a resposta também traz
+ * `analisePick` — altura média em cm via Teorema de Pick.
  */
-export async function analisarImagemGrama(arquivo: File): Promise<AnaliseGramaResponse> {
+export async function analisarImagemGrama(
+  arquivo: File,
+  calibracao?: CalibracaoFita,
+): Promise<AnaliseGramaResponse> {
   const formData = new FormData();
   formData.append("arquivo", arquivo);
+  if (calibracao) {
+    formData.append("calibP1X", String(calibracao.p1.x));
+    formData.append("calibP1Y", String(calibracao.p1.y));
+    formData.append("calibP2X", String(calibracao.p2.x));
+    formData.append("calibP2Y", String(calibracao.p2.y));
+    formData.append("calibDistanciaCm", String(calibracao.distanciaCm));
+  }
 
   let res: Response;
   try {

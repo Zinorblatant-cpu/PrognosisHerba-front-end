@@ -121,6 +121,84 @@ def cobertura_verde_pct(mask: np.ndarray) -> float:
     return float(np.count_nonzero(mask == 255)) / mask.size * 100.0
 
 
+def calcular_px_por_cm(
+    p1: tuple[float, float], p2: tuple[float, float], distancia_cm: float
+) -> float:
+    """Escala px/cm a partir de 2 pontos clicados na fita métrica + a
+    distância real (cm) conhecida entre eles.
+
+    Porta pura de `Challenge-Grama-Webcam-Exato/calibrar.py:calcular_px_por_cm`
+    (mesma fórmula), sem dependência de webcam/OpenCV UI.
+    """
+    if distancia_cm <= 0:
+        raise ValueError("distanciaCm deve ser > 0.")
+    dx = p2[0] - p1[0]
+    dy = p2[1] - p1[1]
+    dist_px = float(np.hypot(dx, dy))
+    if dist_px == 0:
+        raise ValueError("Os dois pontos de calibração são idênticos.")
+    return dist_px / distancia_cm
+
+
+def contar_pontos_pick(mask: np.ndarray) -> tuple[int, int]:
+    """Conta pontos interiores (I) e de borda (B) da máscara pro Teorema de Pick.
+
+    Cada pixel verde é um ponto de uma malha unitária (lattice point = centro
+    do pixel). Interior: pixel cujos 4 vizinhos ortogonais também são verdes
+    (`cv2.erode` com kernel em cruz 3x3). `borderValue=0` é explícito porque o
+    default do OpenCV trata "fora da imagem" como foreground — sem isso, um
+    pixel de grama que toca a borda da foto (comum) seria contado como
+    interior mesmo sem vizinho real ali. Borda: os demais pixels verdes.
+
+    Nota: nessa convenção (lattice = centro do pixel), a área de Pick
+    (I + B/2 - 1) NÃO reproduz a contagem bruta de pixels — desconta
+    aproximadamente metade do perímetro, o que amortece bordas serrilhadas
+    (pontas de grama) em vez de ser um sinônimo redundante da contagem.
+    """
+    kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+    interior = cv2.erode(mask, kernel, iterations=1, borderValue=0)
+    total = int(np.count_nonzero(mask))
+    pontos_interiores = int(np.count_nonzero(interior))
+    pontos_borda = total - pontos_interiores
+    return pontos_interiores, pontos_borda
+
+
+def analisar_pick(mask: np.ndarray, px_por_cm: float) -> dict | None:
+    """Teorema de Pick sobre o maior componente conexo da máscara, convertido
+    pra cm² via `px_por_cm`, e transformado numa altura MÉDIA (área da mancha
+    ÷ largura do seu bounding box — como se fosse um retângulo equivalente).
+
+    Restringir ao maior componente evita que um respingo verde isolado
+    (ruído, anti-aliasing) infle a largura e distorça a altura média. None se
+    não há nenhum componente verde.
+    """
+    num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(mask, connectivity=4)
+    if num_labels <= 1:  # só o fundo (label 0)
+        return None
+
+    maior_label = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    largura_px = int(stats[maior_label, cv2.CC_STAT_WIDTH])
+    if largura_px <= 0:
+        return None
+
+    mascara_componente = np.where(labels == maior_label, 255, 0).astype(np.uint8)
+    pontos_interiores, pontos_borda = contar_pontos_pick(mascara_componente)
+    area_px2 = max(pontos_interiores + pontos_borda / 2 - 1, 0.0)
+
+    area_cm2 = area_px2 / (px_por_cm ** 2)
+    largura_cm = largura_px / px_por_cm
+    altura_media_cm = area_cm2 / largura_cm
+
+    return {
+        "pxPorCm": px_por_cm,
+        "pontosInteriores": pontos_interiores,
+        "pontosBorda": pontos_borda,
+        "areaCm2": area_cm2,
+        "larguraCm": largura_cm,
+        "alturaMediaCm": altura_media_cm,
+    }
+
+
 def _formatar_pct(valor: float | None) -> str:
     if valor is None:
         return "—"
@@ -174,8 +252,14 @@ def analisar_imagem(
     conteudo: bytes,
     faixa_baixa_pct: float = FAIXA_BAIXA_PCT,
     faixa_media_pct: float = FAIXA_MEDIA_PCT,
+    px_por_cm: float | None = None,
 ) -> dict:
     """Pipeline completo: decodifica, segmenta, mede e classifica uma imagem.
+
+    `px_por_cm` é opcional — quando informado (calibração por fita métrica),
+    a chave `analisePick` do retorno traz a altura média em cm via Teorema de
+    Pick (ver `analisar_pick`); sem calibração, vem `None` e o resultado em %
+    (sempre calculado) continua sendo a única leitura disponível.
 
     Retorna um dict serializável com os campos usados pelo endpoint
     `/grama/analisar` (chave `imagemAnotadaPng` traz os bytes crus do PNG,
@@ -184,6 +268,8 @@ def analisar_imagem(
     frame = decodificar_imagem(conteudo)
     mask = apply_mask(frame)
     altura_frame, largura_frame = mask.shape[:2]
+
+    analise_pick = analisar_pick(mask, px_por_cm) if px_por_cm is not None else None
 
     top_ys = measure_top_y(mask, SAMPLE_COLS)
     alturas_pct = [y_para_altura_pct(y, altura_frame) for y in top_ys]
@@ -219,4 +305,5 @@ def analisar_imagem(
         "larguraPx": largura_frame,
         "alturaPx": altura_frame,
         "imagemAnotadaPng": buffer.tobytes(),
+        "analisePick": analise_pick,
     }

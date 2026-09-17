@@ -120,6 +120,15 @@ export interface AnaliseGramaColuna {
   categoria: string;
 }
 
+export interface AnalisePick {
+  pxPorCm: number;
+  pontosInteriores: number;
+  pontosBorda: number;
+  areaCm2: number;
+  larguraCm: number;
+  alturaMediaCm: number;
+}
+
 export interface AnaliseGramaResponse {
   nivel: number;
   categoria: string;
@@ -130,4 +139,13 @@ export interface AnaliseGramaResponse {
   larguraPx: number;
   alturaPx: number;
   imagemAnotadaBase64: string;
+  analisePick: AnalisePick | null;
+}
+
+/** Dois pontos clicados na fita métrica (coordenadas na resolução nativa da
+ * imagem) + a distância real (cm) que eles representam. */
+export interface CalibracaoFita {
+  p1: { x: number; y: number };
+  p2: { x: number; y: number };
+  distanciaCm: number;
 }

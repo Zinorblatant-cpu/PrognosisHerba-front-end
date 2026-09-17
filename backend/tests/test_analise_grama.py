@@ -3,6 +3,8 @@ Testes para analise_grama.py e o endpoint POST /grama/analisar.
 
 Rodar: pytest tests/test_analise_grama.py -v
 """
+from pathlib import Path
+
 import cv2
 import numpy as np
 import pytest
@@ -10,9 +12,12 @@ from fastapi.testclient import TestClient
 
 from analise_grama import (
     analisar_imagem,
+    analisar_pick,
     apply_mask,
+    calcular_px_por_cm,
     classify_frame_pct,
     classify_pct,
+    contar_pontos_pick,
     margem_erro_pct,
     measure_top_y,
     y_para_altura_pct,
@@ -23,6 +28,15 @@ client = TestClient(app)
 
 VERDE_BGR = (40, 180, 40)
 FUNDO_BGR = (40, 80, 120)
+
+FIXTURE_GRAMA_COM_FITA = Path(__file__).parent / "fixtures" / "grama_com_fita.png"
+# Ver tests/fixtures/gerar_grama_com_fita.py: grama 250x150px, px_por_cm=10
+# exato com esses dois pontos -> valores esperados calculáveis à mão.
+FIXTURE_P1 = (310, 50)
+FIXTURE_P2 = (310, 150)
+FIXTURE_DISTANCIA_CM = 10.0
+FIXTURE_AREA_CM2_ESPERADA = 371.01
+FIXTURE_ALTURA_MEDIA_CM_ESPERADA = 14.8404
 
 
 def _imagem_png(altura=200, largura=300, fracao_verde_de_baixo=0.0):
@@ -105,6 +119,69 @@ class TestMargemErroPct:
         assert margem_erro_pct([10, 20, None]) == 5.0
 
 
+class TestCalcularPxPorCm:
+    def test_caso_horizontal(self):
+        assert calcular_px_por_cm((0, 0), (100, 0), 10.0) == pytest.approx(10.0)
+
+    def test_caso_vertical_da_fixture(self):
+        px_por_cm = calcular_px_por_cm(FIXTURE_P1, FIXTURE_P2, FIXTURE_DISTANCIA_CM)
+        assert px_por_cm == pytest.approx(10.0)
+
+    def test_distancia_cm_invalida_levanta_valueerror(self):
+        with pytest.raises(ValueError):
+            calcular_px_por_cm((0, 0), (100, 0), 0.0)
+        with pytest.raises(ValueError):
+            calcular_px_por_cm((0, 0), (100, 0), -5.0)
+
+    def test_pontos_identicos_levanta_valueerror(self):
+        with pytest.raises(ValueError):
+            calcular_px_por_cm((10, 10), (10, 10), 10.0)
+
+
+class TestContarPontosPick:
+    def test_mascara_vazia(self):
+        mask = np.zeros((10, 10), dtype=np.uint8)
+        assert contar_pontos_pick(mask) == (0, 0)
+
+    def test_bloco_1x1(self):
+        mask = np.zeros((10, 10), dtype=np.uint8)
+        mask[5, 5] = 255
+        assert contar_pontos_pick(mask) == (0, 1)
+
+    def test_bloco_3x3(self):
+        mask = np.zeros((10, 10), dtype=np.uint8)
+        mask[3:6, 3:6] = 255
+        assert contar_pontos_pick(mask) == (1, 8)
+
+    def test_bloco_5x4(self):
+        mask = np.zeros((10, 10), dtype=np.uint8)
+        mask[2:6, 2:7] = 255  # 4 linhas (altura) x 5 colunas (largura)
+        assert contar_pontos_pick(mask) == (6, 14)
+
+
+class TestAnalisarPick:
+    def test_retangulo_sintetico_bate_valores_esperados(self):
+        mask = np.zeros((300, 400), dtype=np.uint8)
+        mask[150:300, 0:250] = 255  # mesmo retângulo da fixture: 250x150px
+        resultado = analisar_pick(mask, px_por_cm=10.0)
+        assert resultado["pontosInteriores"] == 36704
+        assert resultado["pontosBorda"] == 796
+        assert resultado["areaCm2"] == pytest.approx(FIXTURE_AREA_CM2_ESPERADA)
+        assert resultado["larguraCm"] == pytest.approx(25.0)
+        assert resultado["alturaMediaCm"] == pytest.approx(FIXTURE_ALTURA_MEDIA_CM_ESPERADA)
+
+    def test_none_sem_componente_verde(self):
+        mask = np.zeros((50, 50), dtype=np.uint8)
+        assert analisar_pick(mask, px_por_cm=10.0) is None
+
+    def test_ignora_respingo_isolado_menor(self):
+        mask = np.zeros((300, 400), dtype=np.uint8)
+        mask[150:300, 0:250] = 255  # blob principal: 250x150px
+        mask[0:3, 390:393] = 255  # respingo isolado, bem menor e distante
+        resultado = analisar_pick(mask, px_por_cm=10.0)
+        assert resultado["larguraCm"] == pytest.approx(25.0)
+
+
 # ── pipeline completo ─────────────────────────────────────────────────────────
 
 class TestAnalisarImagem:
@@ -164,5 +241,58 @@ class TestEndpointAnalisarGrama:
         res = client.post(
             "/grama/analisar?faixaBaixaPct=40&faixaMediaPct=10",
             files={"arquivo": ("grama.png", arquivo, "image/png")},
+        )
+        assert res.status_code == 422
+
+    def test_sem_calibracao_analisepick_e_none(self):
+        arquivo = _imagem_png(fracao_verde_de_baixo=0.3)
+        res = client.post(
+            "/grama/analisar",
+            files={"arquivo": ("grama.png", arquivo, "image/png")},
+        )
+        assert res.status_code == 200
+        assert res.json()["analisePick"] is None
+
+
+class TestEndpointAnalisarGramaComCalibracao:
+    def _campos_calibracao(self):
+        return {
+            "calibP1X": str(FIXTURE_P1[0]),
+            "calibP1Y": str(FIXTURE_P1[1]),
+            "calibP2X": str(FIXTURE_P2[0]),
+            "calibP2Y": str(FIXTURE_P2[1]),
+            "calibDistanciaCm": str(FIXTURE_DISTANCIA_CM),
+        }
+
+    def test_upload_calibrado_retorna_analise_pick(self):
+        conteudo = FIXTURE_GRAMA_COM_FITA.read_bytes()
+        res = client.post(
+            "/grama/analisar",
+            files={"arquivo": ("grama_com_fita.png", conteudo, "image/png")},
+            data=self._campos_calibracao(),
+        )
+        assert res.status_code == 200
+        pick = res.json()["analisePick"]
+        assert pick is not None
+        assert pick["pxPorCm"] == pytest.approx(10.0)
+        assert pick["alturaMediaCm"] == pytest.approx(FIXTURE_ALTURA_MEDIA_CM_ESPERADA, abs=0.01)
+
+    def test_calibracao_parcial_retorna_422(self):
+        conteudo = FIXTURE_GRAMA_COM_FITA.read_bytes()
+        res = client.post(
+            "/grama/analisar",
+            files={"arquivo": ("grama_com_fita.png", conteudo, "image/png")},
+            data={"calibP1X": "310"},
+        )
+        assert res.status_code == 422
+
+    def test_distancia_cm_zero_retorna_422(self):
+        conteudo = FIXTURE_GRAMA_COM_FITA.read_bytes()
+        campos = self._campos_calibracao()
+        campos["calibDistanciaCm"] = "0"
+        res = client.post(
+            "/grama/analisar",
+            files={"arquivo": ("grama_com_fita.png", conteudo, "image/png")},
+            data=campos,
         )
         assert res.status_code == 422
