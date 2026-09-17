@@ -1,7 +1,5 @@
 import type {
   AlocacaoPublicada,
-  AnaliseGramaResponse,
-  CalibracaoFita,
   Clusterizacao,
   Parametros,
   GerarAlocacaoDePrevisoesRequest,
@@ -85,47 +83,6 @@ export async function getAlocacaoAtual(): Promise<AlocacaoPublicada | null> {
     if (e instanceof ApiError && e.status === 404) return null;
     throw e;
   }
-}
-
-/**
- * Envia uma foto avulsa de grama para análise por segmentação de cor.
- * Upload multipart — não passa pelo helper `request` porque este força
- * `Content-Type: application/json`, incompatível com FormData.
- *
- * `calibracao` é opcional: quando informada (2 pontos clicados na fita
- * métrica + a distância real entre eles), a resposta também traz
- * `analisePick` — altura média em cm via Teorema de Pick.
- */
-export async function analisarImagemGrama(
-  arquivo: File,
-  calibracao?: CalibracaoFita,
-): Promise<AnaliseGramaResponse> {
-  const formData = new FormData();
-  formData.append("arquivo", arquivo);
-  if (calibracao) {
-    formData.append("calibP1X", String(calibracao.p1.x));
-    formData.append("calibP1Y", String(calibracao.p1.y));
-    formData.append("calibP2X", String(calibracao.p2.x));
-    formData.append("calibP2Y", String(calibracao.p2.y));
-    formData.append("calibDistanciaCm", String(calibracao.distanciaCm));
-  }
-
-  let res: Response;
-  try {
-    res = await fetch(`${BASE_URL}/grama/analisar`, { method: "POST", body: formData });
-  } catch {
-    throw new ApiError(
-      `Não foi possível conectar ao backend em ${BASE_URL}. Confirme que o servidor está rodando (uvicorn server:app --port 8002).`,
-      0,
-    );
-  }
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    throw new ApiError(body?.detail ?? `Erro ${res.status} ao analisar a imagem`, res.status);
-  }
-
-  return res.json() as Promise<AnaliseGramaResponse>;
 }
 
 export { ApiError };

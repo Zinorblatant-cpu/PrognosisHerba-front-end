@@ -9,7 +9,6 @@ import {
   Users,
   TriangleAlert,
   MonitorCheck,
-  Camera,
 } from "lucide-react";
 import { KpiCard } from "../components/ui/KpiCard";
 import { Card, CardHeader } from "../components/ui/Card";
@@ -44,13 +43,6 @@ const FUNCOES = [
     numero: "04",
     title: "Monitoramento",
     description: "Acompanha em tempo real quais locais as equipes já marcaram como concluídos.",
-  },
-  {
-    to: "/analise-grama",
-    icon: Camera,
-    numero: "05",
-    title: "Análise de grama",
-    description: "Envia uma foto da grama e estima a altura por segmentação de cor (HSV), sem câmera calibrada.",
   },
 ];
 

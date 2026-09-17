@@ -7,7 +7,6 @@ import {
   Sprout,
   MonitorCheck,
   Network,
-  Camera,
   X,
 } from "lucide-react";
 
@@ -18,7 +17,6 @@ const NAV_ITEMS = [
   { to: "/cronograma", label: "Cronograma", icon: CalendarDays },
   { to: "/agrupamento", label: "Agrupamento", icon: Network },
   { to: "/monitoramento", label: "Monitoramento", icon: MonitorCheck },
-  { to: "/analise-grama", label: "Análise de grama", icon: Camera },
 ];
 
 /**

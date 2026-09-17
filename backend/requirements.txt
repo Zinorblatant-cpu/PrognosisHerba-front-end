@@ -2,8 +2,6 @@ fastapi
 uvicorn
 pulp
 scikit-learn
-python-multipart
-opencv-python-headless
 numpy
 
 # dev / testes
