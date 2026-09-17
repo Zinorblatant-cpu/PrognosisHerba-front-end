@@ -313,7 +313,11 @@ export function AnaliseGrama() {
               </div>
               <p className="mt-4 text-xs leading-relaxed text-fg-faint">
                 Essa altura é uma MÉDIA da mancha de grama inteira (área ÷ largura), diferente da leitura por coluna
-                acima (que mostra o topo da grama em 3 pontos específicos).
+                acima (que mostra o topo da grama em 3 pontos específicos). Na imagem anotada, os pontos amostrados
+                da malha do Teorema de Pick aparecem em{" "}
+                <span className="font-medium text-[rgb(0,180,0)]">verde (interior)</span> e{" "}
+                <span className="font-medium text-[rgb(255,140,0)]">laranja (borda)</span>, com a caixa em magenta
+                marcando a largura usada no cálculo.
               </p>
             </Card>
           )}

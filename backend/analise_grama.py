@@ -140,27 +140,44 @@ def calcular_px_por_cm(
     return dist_px / distancia_cm
 
 
+def _mascara_interior_pick(mask: np.ndarray) -> np.ndarray:
+    """Pixels verdes cujos 4 vizinhos ortogonais também são verdes.
+
+    `borderValue=0` é explícito porque o default do OpenCV trata "fora da
+    imagem" como foreground — sem isso, um pixel de grama que toca a borda da
+    foto (comum) seria contado como interior mesmo sem vizinho real ali.
+    """
+    kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+    return cv2.erode(mask, kernel, iterations=1, borderValue=0)
+
+
 def contar_pontos_pick(mask: np.ndarray) -> tuple[int, int]:
     """Conta pontos interiores (I) e de borda (B) da máscara pro Teorema de Pick.
 
     Cada pixel verde é um ponto de uma malha unitária (lattice point = centro
-    do pixel). Interior: pixel cujos 4 vizinhos ortogonais também são verdes
-    (`cv2.erode` com kernel em cruz 3x3). `borderValue=0` é explícito porque o
-    default do OpenCV trata "fora da imagem" como foreground — sem isso, um
-    pixel de grama que toca a borda da foto (comum) seria contado como
-    interior mesmo sem vizinho real ali. Borda: os demais pixels verdes.
+    do pixel). Interior: ver `_mascara_interior_pick`. Borda: os demais
+    pixels verdes.
 
     Nota: nessa convenção (lattice = centro do pixel), a área de Pick
     (I + B/2 - 1) NÃO reproduz a contagem bruta de pixels — desconta
     aproximadamente metade do perímetro, o que amortece bordas serrilhadas
     (pontas de grama) em vez de ser um sinônimo redundante da contagem.
     """
-    kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-    interior = cv2.erode(mask, kernel, iterations=1, borderValue=0)
+    interior = _mascara_interior_pick(mask)
     total = int(np.count_nonzero(mask))
     pontos_interiores = int(np.count_nonzero(interior))
     pontos_borda = total - pontos_interiores
     return pontos_interiores, pontos_borda
+
+
+def maior_componente(mask: np.ndarray) -> np.ndarray | None:
+    """Isola o maior componente conexo da máscara (ignora respingos menores
+    e ruído). None se não há nenhum componente verde."""
+    num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(mask, connectivity=4)
+    if num_labels <= 1:  # só o fundo (label 0)
+        return None
+    maior_label = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    return np.where(labels == maior_label, 255, 0).astype(np.uint8)
 
 
 def analisar_pick(mask: np.ndarray, px_por_cm: float) -> dict | None:
@@ -205,6 +222,58 @@ def _formatar_pct(valor: float | None) -> str:
     return f"{valor:.1f}%"
 
 
+# Verde = ponto interior (I); laranja = ponto de borda (B) — mesmas cores da
+# legenda mostrada no frontend.
+COR_PICK_INTERIOR_BGR = (0, 220, 0)
+COR_PICK_BORDA_BGR = (0, 140, 255)
+COR_PICK_CAIXA_BGR = (255, 0, 255)
+
+
+def _desenhar_pontos_pick(annotated: np.ndarray, mask: np.ndarray, analise_pick: dict) -> None:
+    """Amostra e desenha uma "bolinha" por ponto da malha do Teorema de Pick
+    (verde=interior, laranja=borda) sobre o maior componente da máscara —
+    não dá pra desenhar 1 bolinha por pixel (seriam dezenas de milhares,
+    ilegível), então amostra numa grade espaçada proporcional ao tamanho da
+    mancha. Também desenha a caixa delimitadora usada como "largura" e um
+    resumo da área/altura calculadas.
+    """
+    componente = maior_componente(mask)
+    if componente is None:
+        return
+    interior = _mascara_interior_pick(componente)
+
+    x, y, largura, altura = cv2.boundingRect(componente)
+    espacamento = max(min(largura, altura) // 20, 5)
+
+    # Garante que a última linha/coluna da caixa entra na amostra mesmo
+    # quando largura/altura não é múltiplo de `espacamento` — senão os
+    # cantos direito/inferior da mancha ficam sem nenhuma bolinha de borda,
+    # dando a impressão errada de que só o topo/esquerda tem borda.
+    xs = list(range(x, x + largura, espacamento))
+    if xs[-1] != x + largura - 1:
+        xs.append(x + largura - 1)
+    ys = list(range(y, y + altura, espacamento))
+    if ys[-1] != y + altura - 1:
+        ys.append(y + altura - 1)
+
+    for py in ys:
+        for px in xs:
+            if componente[py, px] == 0:
+                continue
+            cor = COR_PICK_INTERIOR_BGR if interior[py, px] == 255 else COR_PICK_BORDA_BGR
+            cv2.circle(annotated, (px, py), 2, cor, -1)
+
+    cv2.rectangle(annotated, (x, y), (x + largura, y + altura), COR_PICK_CAIXA_BGR, 1)
+    legenda = (
+        f"Pick: {analise_pick['alturaMediaCm']:.1f}cm "
+        f"({analise_pick['areaCm2']:.0f}cm2 / {analise_pick['larguraCm']:.1f}cm)"
+    )
+    cv2.putText(
+        annotated, legenda, (x, max(y - 8, 14)),
+        cv2.FONT_HERSHEY_SIMPLEX, 0.5, COR_PICK_CAIXA_BGR, 1,
+    )
+
+
 def desenhar_anotacoes(
     frame_bgr: np.ndarray,
     mask: np.ndarray,
@@ -216,8 +285,12 @@ def desenhar_anotacoes(
     categoria: str,
     faixa_baixa: float,
     faixa_media: float,
+    analise_pick: dict | None = None,
 ) -> np.ndarray:
-    """Desenha a máscara sobreposta + colunas amostradas + categoria sobre a imagem."""
+    """Desenha a máscara sobreposta + colunas amostradas + categoria sobre a
+    imagem. Com `analise_pick` (calibração por fita métrica), também desenha
+    os pontos amostrados da malha do Teorema de Pick — ver `_desenhar_pontos_pick`.
+    """
     annotated = frame_bgr.copy()
     altura_frame, largura_frame = annotated.shape[:2]
 
@@ -236,6 +309,9 @@ def desenhar_anotacoes(
                 annotated, _formatar_pct(altura), (x + 8, max(y_topo - 4, 14)),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, cor, 1,
             )
+
+    if analise_pick is not None:
+        _desenhar_pontos_pick(annotated, mask, analise_pick)
 
     titulo = f"{_formatar_pct(altura_mediana_pct)} ± {_formatar_pct(margem_pct)} - {categoria}"
     (tw, _), _ = cv2.getTextSize(titulo, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
@@ -280,6 +356,7 @@ def analisar_imagem(
     anotada = desenhar_anotacoes(
         frame, mask, top_ys, alturas_pct, SAMPLE_COLS,
         mediana, margem, categoria, faixa_baixa_pct, faixa_media_pct,
+        analise_pick,
     )
     ok, buffer = cv2.imencode(".png", anotada)
     if not ok:
