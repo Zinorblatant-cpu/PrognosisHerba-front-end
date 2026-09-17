@@ -1,5 +1,6 @@
 import type {
   AlocacaoPublicada,
+  AnaliseGramaResponse,
   Clusterizacao,
   Parametros,
   GerarAlocacaoDePrevisoesRequest,
@@ -83,6 +84,33 @@ export async function getAlocacaoAtual(): Promise<AlocacaoPublicada | null> {
     if (e instanceof ApiError && e.status === 404) return null;
     throw e;
   }
+}
+
+/**
+ * Envia uma foto avulsa de grama para análise por segmentação de cor.
+ * Upload multipart — não passa pelo helper `request` porque este força
+ * `Content-Type: application/json`, incompatível com FormData.
+ */
+export async function analisarImagemGrama(arquivo: File): Promise<AnaliseGramaResponse> {
+  const formData = new FormData();
+  formData.append("arquivo", arquivo);
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}/grama/analisar`, { method: "POST", body: formData });
+  } catch {
+    throw new ApiError(
+      `Não foi possível conectar ao backend em ${BASE_URL}. Confirme que o servidor está rodando (uvicorn server:app --port 8002).`,
+      0,
+    );
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(body?.detail ?? `Erro ${res.status} ao analisar a imagem`, res.status);
+  }
+
+  return res.json() as Promise<AnaliseGramaResponse>;
 }
 
 export { ApiError };

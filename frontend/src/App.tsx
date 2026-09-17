@@ -7,6 +7,7 @@ import { Otimizacao } from "./pages/Otimizacao";
 import { Cronograma } from "./pages/Cronograma";
 import { Agrupamento } from "./pages/Agrupamento";
 import { Monitoramento } from "./pages/Monitoramento";
+import { AnaliseGrama } from "./pages/AnaliseGrama";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/cronograma" element={<Cronograma />} />
             <Route path="/agrupamento" element={<Agrupamento />} />
             <Route path="/monitoramento" element={<Monitoramento />} />
+            <Route path="/analise-grama" element={<AnaliseGrama />} />
           </Routes>
         </AppShell>
       </BrowserRouter>

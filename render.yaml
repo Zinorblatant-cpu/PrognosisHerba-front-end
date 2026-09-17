@@ -1,0 +1,47 @@
+services:
+  # API — FastAPI (server.py). Free plan hiberna após ~15min ocioso e leva
+  # ~50s pra acordar na próxima chamada; aceitável pra demo, não pra uso
+  # contínuo.
+  - type: web
+    name: prognosisherba-api
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      # Fixa a versão: o código usa sintaxe `X | None`, exige 3.10+.
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+
+  # Painel principal (Previsões, Otimização, Cronograma, Monitoramento,
+  # Análise de grama). Static Site — free, sem hibernação.
+  - type: static
+    name: prognosisherba-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://prognosisherba-api.onrender.com
+    routes:
+      # SPA com react-router: sem isso, dar F5 numa rota tipo /previsoes vira 404.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Site dos podadores (consome /alocacao/* do mesmo backend).
+  - type: static
+    name: prognosisherba-podadores
+    rootDir: podadores
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://prognosisherba-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

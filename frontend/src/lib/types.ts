@@ -112,3 +112,22 @@ export interface AlocacaoPublicada {
   alocacoes: AlocacaoDiaComStatus[];
   naoAlocados: LocalAlocado[];
 }
+
+export interface AnaliseGramaColuna {
+  fracaoX: number;
+  alturaPct: number | null;
+  nivel: number;
+  categoria: string;
+}
+
+export interface AnaliseGramaResponse {
+  nivel: number;
+  categoria: string;
+  alturaMedianaPct: number | null;
+  margemErroPct: number | null;
+  coberturaVerdePct: number;
+  porColuna: AnaliseGramaColuna[];
+  larguraPx: number;
+  alturaPx: number;
+  imagemAnotadaBase64: string;
+}

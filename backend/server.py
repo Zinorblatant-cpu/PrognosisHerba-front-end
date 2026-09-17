@@ -19,6 +19,10 @@ GET  /clusterizacao              → agrupa as regiões por rota, altura atual e
                                    tendência de crescimento (k-means). Camada
                                    de análise, separada do solver — ver
                                    clusterizacao.py.
+POST /grama/analisar             → recebe uma foto avulsa de grama (upload) e
+                                   estima a altura por segmentação HSV — ver
+                                   analise_grama.py. Sem calibração de câmera,
+                                   a altura sai em % da imagem, não em cm.
 
 Sem autenticação: qualquer chamada aos dois endpoints acima é
 autocontida. A única persistência do backend é a alocação publicada para
@@ -27,9 +31,10 @@ o site dos podadores (ver persistencia.py e os endpoints /alocacao/*).
 Desenvolvimento:
     uvicorn server:app --port 8002 --reload
 """
+import base64
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -40,10 +45,13 @@ from horoprognosis import (
     rodar_modelo_horoprognosis,
     rodar_modelo_horoprognosis_com_prazos,
 )
+from analise_grama import FAIXA_BAIXA_PCT, FAIXA_MEDIA_PCT, analisar_imagem
 from clusterizacao import clusterizar_do_csv
 from persistencia import marcar_conclusao, obter_alocacao_atual, publicar_alocacao
 from fonte_previsoes import garantir_previsoes_atuais
 from previsoes import LIMIAR_PODA_CM, carregar_previsoes, derivar_locais_de_poda
+
+MAX_UPLOAD_IMAGEM_BYTES = 10 * 1024 * 1024  # 10MB
 
 app = FastAPI(title="Horoprognosis API", version="1.0")
 
@@ -126,6 +134,25 @@ class ClusterizacaoResponse(BaseModel):
 class Parametros(BaseModel):
     limiarPodaCm: float
     capacidadeDiaria: float
+
+
+class AnaliseGramaColuna(BaseModel):
+    fracaoX: float
+    alturaPct: float | None
+    nivel: int
+    categoria: str
+
+
+class AnaliseGramaResponse(BaseModel):
+    nivel: int
+    categoria: str
+    alturaMedianaPct: float | None
+    margemErroPct: float | None
+    coberturaVerdePct: float
+    porColuna: list[AnaliseGramaColuna]
+    larguraPx: int
+    alturaPx: int
+    imagemAnotadaBase64: str
 
 
 class SemanaPrevisao(BaseModel):
@@ -225,6 +252,40 @@ def clusterizacao_endpoint(k: int | None = Query(default=None, ge=1)):
     número de grupos; sem ele o número sai do tamanho do lote."""
     garantir_previsoes_atuais()
     return clusterizar_do_csv(k=k)
+
+
+@app.post("/grama/analisar", response_model=AnaliseGramaResponse)
+async def analisar_grama_endpoint(
+    arquivo: UploadFile = File(...),
+    faixaBaixaPct: float = Query(default=FAIXA_BAIXA_PCT, gt=0),
+    faixaMediaPct: float = Query(default=FAIXA_MEDIA_PCT, gt=0),
+):
+    """Analisa uma foto avulsa de grama (upload) via segmentação HSV.
+
+    Sem câmera fixa calibrada não há `px_por_cm`/`y_chao` reais — a altura
+    sai como % da altura da imagem, não em centímetros. Ver analise_grama.py.
+    """
+    if faixaMediaPct <= faixaBaixaPct:
+        raise HTTPException(status_code=422, detail="faixaMediaPct deve ser maior que faixaBaixaPct.")
+
+    conteudo = await arquivo.read()
+    if not conteudo:
+        raise HTTPException(status_code=400, detail="Arquivo vazio.")
+    if len(conteudo) > MAX_UPLOAD_IMAGEM_BYTES:
+        raise HTTPException(status_code=413, detail="Imagem maior que 10MB.")
+
+    try:
+        resultado = analisar_imagem(conteudo, faixaBaixaPct, faixaMediaPct)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    imagem_png = resultado.pop("imagemAnotadaPng")
+    imagem_b64 = base64.b64encode(imagem_png).decode("ascii")
+
+    return AnaliseGramaResponse(
+        **resultado,
+        imagemAnotadaBase64=f"data:image/png;base64,{imagem_b64}",
+    )
 
 
 @app.post("/gerar-alocacao", response_model=AlocacaoResponse)
