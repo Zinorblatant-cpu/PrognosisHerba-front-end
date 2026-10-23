@@ -15,7 +15,13 @@ describe("App", () => {
     vi.mocked(getAlocacaoAtual).mockResolvedValue(null);
   });
 
-  it("renderiza a Home na rota raiz", async () => {
+  it("renderiza a página da equipe na rota raiz", () => {
+    render(<App />);
+    expect(screen.getByRole("heading", { name: "Quem faz o PrognosisHerba" })).toBeInTheDocument();
+  });
+
+  it("renderiza a Home na rota /painel", async () => {
+    window.history.pushState({}, "", "/painel");
     render(<App />);
     expect(await screen.findByText("O que você quer fazer?")).toBeInTheDocument();
   });

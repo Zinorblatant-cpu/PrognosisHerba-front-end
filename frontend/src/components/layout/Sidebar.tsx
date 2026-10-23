@@ -7,11 +7,13 @@ import {
   Sprout,
   MonitorCheck,
   Network,
+  Users,
   X,
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Início", icon: LayoutGrid, end: true },
+  { to: "/", label: "Início", icon: Users, end: true },
+  { to: "/painel", label: "Painel", icon: LayoutGrid },
   { to: "/previsoes", label: "Previsões IA", icon: TrendingUp },
   { to: "/otimizacao", label: "Otimização", icon: SlidersHorizontal },
   { to: "/cronograma", label: "Cronograma", icon: CalendarDays },

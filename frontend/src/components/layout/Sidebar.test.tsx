@@ -13,6 +13,7 @@ describe("Sidebar", () => {
     );
     expect(screen.getByText("Herba")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Início/ })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /Painel/ })).toHaveAttribute("href", "/painel");
     expect(screen.getByRole("link", { name: /Previsões IA/ })).toHaveAttribute("href", "/previsoes");
     expect(screen.getByRole("link", { name: /Otimização/ })).toHaveAttribute("href", "/otimizacao");
     expect(screen.getByRole("link", { name: /Cronograma/ })).toHaveAttribute("href", "/cronograma");
