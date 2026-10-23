@@ -60,6 +60,12 @@ describe("Equipe", () => {
     expect(habilidades).toHaveTextContent("Power BI");
   });
 
+  it("mostra o vídeo de apresentação do projeto", () => {
+    renderizar();
+    const secao = screen.getByRole("region", { name: "Apresentação do PrognosisHerba" });
+    expect(secao.querySelector("video source")).toHaveAttribute("src", "/video/apresentacao.mp4");
+  });
+
   it("navega para o painel ao clicar em Acessar o painel", async () => {
     const user = userEvent.setup();
     render(

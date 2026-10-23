@@ -71,17 +71,6 @@ export function Home() {
         <p className="mt-2.5 text-sm text-fg-muted">Escolha uma das etapas do fluxo de manejo de poda.</p>
       </div>
 
-      <div className="w-full max-w-3xl">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-fg-muted">
-          Apresentação do PrognosisHerba
-        </h2>
-        <div className="overflow-hidden rounded-2xl border border-border bg-bg-card shadow-[0_16px_32px_-16px_rgba(0,0,0,0.7)]">
-          <video className="w-full" controls playsInline>
-            <source src="/video/apresentacao.mp4" type="video/mp4" />
-          </video>
-        </div>
-      </div>
-
       <div className="grid w-full max-w-5xl grid-cols-1 gap-4 text-left sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
         {FUNCOES.map(({ to, icon: Icon, numero, title, description }) => (
           <Link

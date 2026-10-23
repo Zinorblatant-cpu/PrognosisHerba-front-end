@@ -188,6 +188,20 @@ export function Equipe() {
         </Link>
       </section>
 
+      <section aria-labelledby="titulo-apresentacao" className="mx-auto w-full max-w-3xl">
+        <h2
+          id="titulo-apresentacao"
+          className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-fg-faint"
+        >
+          Apresentação do PrognosisHerba
+        </h2>
+        <div className="overflow-hidden rounded-2xl border border-border bg-bg-card shadow-[0_16px_32px_-16px_rgba(0,0,0,0.7)]">
+          <video className="w-full" controls playsInline preload="metadata">
+            <source src="/video/apresentacao.mp4" type="video/mp4" />
+          </video>
+        </div>
+      </section>
+
       <section aria-labelledby="titulo-equipe">
         <div className="mb-6 flex flex-col items-center text-center sm:mb-8">
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-fg-faint">O time</p>
