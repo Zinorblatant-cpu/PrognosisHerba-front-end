@@ -1,3 +1,16 @@
+> [!WARNING]
+> **Repositório arquivado.** Este monorepo foi dividido em repositórios
+> separados e não recebe mais atualizações. O código, as correções e a
+> documentação atual estão nos repositórios abaixo.
+>
+> | Repositório | Conteúdo | Antes, neste repositório |
+> |---|---|---|
+> | [prognosisherba-api](https://github.com/Zinorblatant-cpu/prognosisherba-api) | FastAPI, solver HoroHerba (PuLP/CBC), previsões, clusterização | `backend/` |
+> | [prognosisherba-painel](https://github.com/Zinorblatant-cpu/prognosisherba-painel) | Painel de planejamento do gestor | `frontend/` |
+> | [prognosisherba-podadores](https://github.com/Zinorblatant-cpu/prognosisherba-podadores) | App das equipes em campo | `podadores/` |
+> | [prognosisherba-visao](https://github.com/Zinorblatant-cpu/prognosisherba-visao) | Estação de medição por webcam + API de leituras | — |
+> | [prognosisherba-docs](https://github.com/Zinorblatant-cpu/prognosisherba-docs) | Documentação: arquitetura, modelos matemáticos e apresentação | `MODELO_MATEMATICO.md` |
+
 <h1 align="center">Horoprognosis — PrognosisHerba</h1>
 
 <p align="center">
